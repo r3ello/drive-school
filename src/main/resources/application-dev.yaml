@@ -1,0 +1,3 @@
+agent:
+  telegram:
+    mode: long-polling

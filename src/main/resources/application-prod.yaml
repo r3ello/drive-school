@@ -1,0 +1,4 @@
+agent:
+  telegram:
+    mode: webhook
+    webhook-url: ${TELEGRAM_WEBHOOK_URL}

@@ -1,0 +1,1120 @@
+openapi: 3.0.3
+info:
+  title: Class Scheduling API
+  version: 1.0.0
+  description: >
+    REST API for managing 1-hour class slots for a single teacher. Supports students,
+    slots (book/cancel/free/replace/reschedule), blocks (unavailability), audit events,
+    and an optional waitlist.
+
+servers:
+  - url: /api/v1
+
+tags:
+  - name: Students
+  - name: Slots
+  - name: Blocks
+  - name: Events
+  - name: Waitlist
+
+paths:
+  /students:
+    post:
+      tags: [Students]
+      operationId: createStudent
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StudentCreateRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StudentResponse'
+        '400':
+          $ref: '#/components/responses/Problem'
+    get:
+      tags: [Students]
+      operationId: listStudents
+      parameters:
+        - $ref: '#/components/parameters/Query'
+        - $ref: '#/components/parameters/Active'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+        - $ref: '#/components/parameters/Sort'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StudentPageResponse'
+        '400':
+          $ref: '#/components/responses/Problem'
+
+  /students/{studentId}:
+    get:
+      tags: [Students]
+      operationId: getStudent
+      parameters:
+        - $ref: '#/components/parameters/StudentId'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StudentResponse'
+        '404':
+          $ref: '#/components/responses/Problem'
+    put:
+      tags: [Students]
+      operationId: updateStudent
+      parameters:
+        - $ref: '#/components/parameters/StudentId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StudentUpdateRequest'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StudentResponse'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+
+  /students/{studentId}/deactivate:
+    patch:
+      tags: [Students]
+      operationId: deactivateStudent
+      parameters:
+        - $ref: '#/components/parameters/StudentId'
+      responses:
+        '204':
+          description: Deactivated
+        '404':
+          $ref: '#/components/responses/Problem'
+
+  /students/{studentId}/slots:
+    get:
+      tags: [Students]
+      operationId: getStudentSlotHistory
+      parameters:
+        - $ref: '#/components/parameters/StudentId'
+        - $ref: '#/components/parameters/From'
+        - $ref: '#/components/parameters/To'
+        - name: status
+          in: query
+          required: false
+          description: Filter by slot status
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/SlotStatus'
+          style: form
+          explode: false
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SlotListResponse'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+
+  /slots:
+    post:
+      tags: [Slots]
+      operationId: createSlot
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SlotCreateRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SlotResponse'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+    get:
+      tags: [Slots]
+      operationId: listSlots
+      parameters:
+        - $ref: '#/components/parameters/FromDateTime'
+        - $ref: '#/components/parameters/ToDateTime'
+        - name: status
+          in: query
+          required: false
+          description: 'Filter by slot status (comma-separated). Example: FREE,BOOKED'
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/SlotStatus'
+          style: form
+          explode: false
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SlotListResponse'
+        '400':
+          $ref: '#/components/responses/Problem'
+
+  /slots/{slotId}:
+    get:
+      tags: [Slots]
+      operationId: getSlot
+      parameters:
+        - $ref: '#/components/parameters/SlotId'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SlotResponse'
+        '404':
+          $ref: '#/components/responses/Problem'
+    delete:
+      tags: [Slots]
+      operationId: deleteSlot
+      parameters:
+        - $ref: '#/components/parameters/SlotId'
+      responses:
+        '204':
+          description: Deleted
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+
+  /slots/generate:
+    post:
+      tags: [Slots]
+      operationId: generateSlots
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SlotGenerateRequest'
+      responses:
+        '200':
+          description: Generation summary
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SlotGenerateResponse'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+
+  /slots/{slotId}/book:
+    post:
+      tags: [Slots]
+      operationId: bookSlot
+      parameters:
+        - $ref: '#/components/parameters/SlotId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SlotBookRequest'
+      responses:
+        '200':
+          description: Booked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SlotResponse'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+
+  /slots/{slotId}/cancel:
+    post:
+      tags: [Slots]
+      operationId: cancelSlot
+      parameters:
+        - $ref: '#/components/parameters/SlotId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SlotCancelRequest'
+      responses:
+        '200':
+          description: Cancelled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SlotResponse'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+
+  /slots/{slotId}/free:
+    post:
+      tags: [Slots]
+      operationId: freeSlot
+      parameters:
+        - $ref: '#/components/parameters/SlotId'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SlotFreeRequest'
+      responses:
+        '200':
+          description: Freed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SlotResponse'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+
+  /slots/{slotId}/replace:
+    post:
+      tags: [Slots]
+      operationId: replaceSlotStudent
+      parameters:
+        - $ref: '#/components/parameters/SlotId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SlotReplaceRequest'
+      responses:
+        '200':
+          description: Replaced
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SlotResponse'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+
+  /slots/{slotId}/reschedule:
+    post:
+      tags: [Slots]
+      operationId: rescheduleSlot
+      parameters:
+        - $ref: '#/components/parameters/SlotId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SlotRescheduleRequest'
+      responses:
+        '200':
+          description: Rescheduled (returns target slot state)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RescheduleResponse'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+
+  /slots/{slotId}/events:
+    get:
+      tags: [Events]
+      operationId: listSlotEvents
+      parameters:
+        - $ref: '#/components/parameters/SlotId'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SlotEventListResponse'
+        '404':
+          $ref: '#/components/responses/Problem'
+
+  /events:
+    get:
+      tags: [Events]
+      operationId: listEvents
+      parameters:
+        - $ref: '#/components/parameters/FromDateTime'
+        - $ref: '#/components/parameters/ToDateTime'
+        - name: type
+          in: query
+          required: false
+          description: Filter by event type (comma-separated)
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/EventType'
+          style: form
+          explode: false
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+        - $ref: '#/components/parameters/Sort'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SlotEventPageResponse'
+        '400':
+          $ref: '#/components/responses/Problem'
+
+  /blocks:
+    post:
+      tags: [Blocks]
+      operationId: createBlock
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BlockCreateRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BlockResponse'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+    get:
+      tags: [Blocks]
+      operationId: listBlocks
+      parameters:
+        - $ref: '#/components/parameters/FromDateTime'
+        - $ref: '#/components/parameters/ToDateTime'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BlockListResponse'
+        '400':
+          $ref: '#/components/responses/Problem'
+
+  /blocks/{blockId}:
+    delete:
+      tags: [Blocks]
+      operationId: deleteBlock
+      parameters:
+        - $ref: '#/components/parameters/BlockId'
+      responses:
+        '204':
+          description: Deleted
+        '404':
+          $ref: '#/components/responses/Problem'
+
+  /waitlist:
+    post:
+      tags: [Waitlist]
+      operationId: addToWaitlist
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WaitlistCreateRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WaitlistResponse'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+    get:
+      tags: [Waitlist]
+      operationId: listWaitlist
+      parameters:
+        - name: active
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: true
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+        - $ref: '#/components/parameters/Sort'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WaitlistPageResponse'
+        '400':
+          $ref: '#/components/responses/Problem'
+
+  /waitlist/{waitlistId}:
+    delete:
+      tags: [Waitlist]
+      operationId: removeFromWaitlist
+      parameters:
+        - $ref: '#/components/parameters/WaitlistId'
+      responses:
+        '204':
+          description: Deleted
+        '404':
+          $ref: '#/components/responses/Problem'
+
+components:
+  parameters:
+    StudentId:
+      name: studentId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    SlotId:
+      name: slotId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    BlockId:
+      name: blockId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    WaitlistId:
+      name: waitlistId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+    Query:
+      name: query
+      in: query
+      required: false
+      description: Free text search
+      schema:
+        type: string
+        maxLength: 200
+    Active:
+      name: active
+      in: query
+      required: false
+      schema:
+        type: boolean
+
+    From:
+      name: from
+      in: query
+      required: true
+      schema:
+        type: string
+        format: date
+    To:
+      name: to
+      in: query
+      required: true
+      schema:
+        type: string
+        format: date
+
+    FromDateTime:
+      name: from
+      in: query
+      required: true
+      schema:
+        type: string
+        format: date-time
+    ToDateTime:
+      name: to
+      in: query
+      required: true
+      schema:
+        type: string
+        format: date-time
+
+    Page:
+      name: page
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
+    Size:
+      name: size
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 200
+        default: 20
+    Sort:
+      name: sort
+      in: query
+      required: false
+      description: Spring-style sort, e.g. startAt,asc
+      schema:
+        type: string
+        default: "startAt,asc"
+
+  responses:
+    Problem:
+      description: Problem Details (RFC 7807)
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+
+  schemas:
+    SlotStatus:
+      type: string
+      enum: [FREE, BOOKED, CANCELLED, BLOCKED]
+
+    DayOfWeek:
+      type: string
+      enum: [MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY, SATURDAY, SUNDAY]
+
+    CancelledBy:
+      type: string
+      enum: [STUDENT, TEACHER]
+
+    EventType:
+      type: string
+      enum:
+        - CREATED
+        - GENERATED
+        - BOOKED
+        - CANCELLED
+        - FREED
+        - REPLACED
+        - RESCHEDULED
+        - BLOCKED
+        - UNBLOCKED
+        - NOTES_UPDATED
+
+    ProblemDetails:
+      type: object
+      required: [type, title, status]
+      properties:
+        type:
+          type: string
+          example: "https://example.com/problems/validation-error"
+        title:
+          type: string
+          example: "Validation error"
+        status:
+          type: integer
+          example: 400
+        detail:
+          type: string
+          example: "startAt must be in the future"
+        instance:
+          type: string
+          example: "/api/v1/slots"
+        errors:
+          type: array
+          description: Optional list of field errors
+          items:
+            $ref: '#/components/schemas/FieldError'
+
+    FieldError:
+      type: object
+      required: [field, message]
+      properties:
+        field:
+          type: string
+          example: "startAt"
+        message:
+          type: string
+          example: "must not be null"
+
+    StudentCreateRequest:
+      type: object
+      required: [fullName]
+      properties:
+        fullName:
+          type: string
+          minLength: 1
+          maxLength: 200
+        phone:
+          type: string
+          maxLength: 50
+        email:
+          type: string
+          format: email
+          maxLength: 200
+        notes:
+          type: string
+          maxLength: 2000
+
+    StudentUpdateRequest:
+      type: object
+      required: [fullName, active]
+      properties:
+        fullName:
+          type: string
+          minLength: 1
+          maxLength: 200
+        phone:
+          type: string
+          maxLength: 50
+        email:
+          type: string
+          format: email
+          maxLength: 200
+        notes:
+          type: string
+          maxLength: 2000
+        active:
+          type: boolean
+
+    StudentResponse:
+      type: object
+      required: [id, fullName, active, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        fullName:
+          type: string
+        phone:
+          type: string
+          nullable: true
+        email:
+          type: string
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+        active:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    StudentPageResponse:
+      type: object
+      required: [content, page, size, totalElements, totalPages]
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/StudentResponse'
+        page:
+          type: integer
+        size:
+          type: integer
+        totalElements:
+          type: integer
+        totalPages:
+          type: integer
+
+    SlotCreateRequest:
+      type: object
+      required: [startAt]
+      properties:
+        startAt:
+          type: string
+          format: date-time
+        durationMinutes:
+          type: integer
+          description: Must be 60 for MVP (server enforces).
+          default: 60
+          minimum: 60
+          maximum: 60
+
+    SlotGenerateRequest:
+      type: object
+      required: [from, to, timezone, weeklyRules, slotDurationMinutes]
+      properties:
+        from:
+          type: string
+          format: date
+        to:
+          type: string
+          format: date
+        timezone:
+          type: string
+          example: "Europe/Sofia"
+        weeklyRules:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/WeeklyRule'
+        slotDurationMinutes:
+          type: integer
+          default: 60
+          minimum: 60
+          maximum: 60
+
+    WeeklyRule:
+      type: object
+      required: [dayOfWeek, startTime, endTime]
+      properties:
+        dayOfWeek:
+          $ref: '#/components/schemas/DayOfWeek'
+        startTime:
+          type: string
+          example: "10:00"
+        endTime:
+          type: string
+          example: "20:00"
+
+    SlotGenerateResponse:
+      type: object
+      required: [createdCount, skippedCount]
+      properties:
+        createdCount:
+          type: integer
+        skippedCount:
+          type: integer
+
+    SlotBookRequest:
+      type: object
+      required: [studentId]
+      properties:
+        studentId:
+          type: string
+          format: uuid
+        notes:
+          type: string
+          maxLength: 2000
+
+    SlotCancelRequest:
+      type: object
+      required: [cancelledBy]
+      properties:
+        cancelledBy:
+          $ref: '#/components/schemas/CancelledBy'
+        reason:
+          type: string
+          maxLength: 500
+
+    SlotFreeRequest:
+      type: object
+      properties:
+        notes:
+          type: string
+          maxLength: 2000
+
+    SlotReplaceRequest:
+      type: object
+      required: [newStudentId]
+      properties:
+        newStudentId:
+          type: string
+          format: uuid
+        reason:
+          type: string
+          maxLength: 500
+
+    SlotRescheduleRequest:
+      type: object
+      required: [targetSlotId]
+      properties:
+        targetSlotId:
+          type: string
+          format: uuid
+        reason:
+          type: string
+          maxLength: 500
+
+    SlotResponse:
+      type: object
+      required: [id, startAt, endAt, status, createdAt, updatedAt, version]
+      properties:
+        id:
+          type: string
+          format: uuid
+        startAt:
+          type: string
+          format: date-time
+        endAt:
+          type: string
+          format: date-time
+        status:
+          $ref: '#/components/schemas/SlotStatus'
+        student:
+          allOf:
+            - $ref: '#/components/schemas/StudentBrief'
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+        version:
+          type: integer
+          description: Optimistic locking version
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    StudentBrief:
+      type: object
+      required: [id, fullName]
+      properties:
+        id:
+          type: string
+          format: uuid
+        fullName:
+          type: string
+
+    SlotListResponse:
+      type: object
+      required: [content]
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/SlotResponse'
+
+    BlockCreateRequest:
+      type: object
+      required: [from, to]
+      properties:
+        from:
+          type: string
+          format: date-time
+        to:
+          type: string
+          format: date-time
+        reason:
+          type: string
+          maxLength: 500
+
+    BlockResponse:
+      type: object
+      required: [id, from, to, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        from:
+          type: string
+          format: date-time
+        to:
+          type: string
+          format: date-time
+        reason:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+
+    BlockListResponse:
+      type: object
+      required: [content]
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/BlockResponse'
+
+    SlotEventResponse:
+      type: object
+      required: [id, slotId, type, at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        slotId:
+          type: string
+          format: uuid
+        type:
+          $ref: '#/components/schemas/EventType'
+        at:
+          type: string
+          format: date-time
+        oldStudentId:
+          type: string
+          format: uuid
+          nullable: true
+        newStudentId:
+          type: string
+          format: uuid
+          nullable: true
+        meta:
+          type: object
+          additionalProperties: true
+          nullable: true
+
+    SlotEventListResponse:
+      type: object
+      required: [content]
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/SlotEventResponse'
+
+    SlotEventPageResponse:
+      type: object
+      required: [content, page, size, totalElements, totalPages]
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/SlotEventResponse'
+        page:
+          type: integer
+        size:
+          type: integer
+        totalElements:
+          type: integer
+        totalPages:
+          type: integer
+
+    RescheduleResponse:
+      type: object
+      required: [originSlot, targetSlot]
+      properties:
+        originSlot:
+          $ref: '#/components/schemas/SlotResponse'
+        targetSlot:
+          $ref: '#/components/schemas/SlotResponse'
+
+    WaitlistCreateRequest:
+      type: object
+      required: [studentId]
+      properties:
+        studentId:
+          type: string
+          format: uuid
+        preferredDays:
+          type: array
+          items:
+            $ref: '#/components/schemas/DayOfWeek'
+          nullable: true
+        preferredTimeRanges:
+          type: array
+          items:
+            $ref: '#/components/schemas/TimeRange'
+          nullable: true
+        notes:
+          type: string
+          maxLength: 2000
+          nullable: true
+        priority:
+          type: integer
+          default: 0
+
+    TimeRange:
+      type: object
+      required: [from, to]
+      properties:
+        from:
+          type: string
+          example: "16:00"
+        to:
+          type: string
+          example: "20:00"
+
+    WaitlistResponse:
+      type: object
+      required: [id, student, active, createdAt, priority]
+      properties:
+        id:
+          type: string
+          format: uuid
+        student:
+          $ref: '#/components/schemas/StudentBrief'
+        preferredDays:
+          type: array
+          items:
+            $ref: '#/components/schemas/DayOfWeek'
+          nullable: true
+        preferredTimeRanges:
+          type: array
+          items:
+            $ref: '#/components/schemas/TimeRange'
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+        priority:
+          type: integer
+        active:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+
+    WaitlistPageResponse:
+      type: object
+      required: [content, page, size, totalElements, totalPages]
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/WaitlistResponse'
+        page:
+          type: integer
+        size:
+          type: integer
+        totalElements:
+          type: integer
+        totalPages:
+          type: integer

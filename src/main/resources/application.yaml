@@ -1,0 +1,136 @@
+spring:
+  application:
+    name: calendar
+
+  autoconfigure:
+    exclude:
+      - org.telegram.telegrambots.longpolling.starter.TelegramBotStarterConfiguration
+      - org.telegram.telegrambots.webhook.starter.TelegramBotStarterConfiguration
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/calendar
+    username: postgres
+    password: postgres
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        jdbc:
+          time_zone: Europe/Sofia
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+
+  jackson:
+    time-zone: Europe/Sofia
+    serialization:
+      write-dates-as-timestamps: false
+
+  web:
+    resources:
+      static-locations: classpath:/static/
+
+  # ============================================================================
+  # SPRING AI CONFIGURATION
+  # ============================================================================
+  ai:
+    openai:
+      api-key: ${OPENAI_API_KEY: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}
+      chat:
+        options:
+          model: gpt-4o
+          temperature: 0.3
+
+server:
+  error:
+    include-message: always
+    include-binding-errors: always
+
+logging:
+  level:
+    com.bellgado.calendar: DEBUG
+
+# ============================================================================
+# NOTIFICATION SYSTEM CONFIGURATION
+# ============================================================================
+notifications:
+  # Master switch - set to true to enable notifications
+  enabled: true
+
+  dispatcher:
+    # STORE_ONLY: Only store in outbox for async processing
+    # STORE_AND_DISPATCH: Store and immediately attempt to send
+    mode: STORE_ONLY
+
+  scheduler:
+    # Enable background notification processor
+    enabled: false
+    # Number of notifications to process per batch
+    batch-size: 10
+    # Interval between polling (ISO-8601 duration)
+    poll-interval: PT30S
+
+  providers:
+    # Provider to use for each channel (NOOP for testing)
+    email: NOOP
+    sms: NOOP
+    whatsapp: NOOP
+
+  defaults:
+    # Maximum retry attempts
+    max-attempts: 3
+    # Notification expiry (ISO-8601 duration)
+    expiry: PT24H
+    # Default priority
+    priority: 0
+
+# ============================================================================
+# AI AGENT + TELEGRAM BOT CONFIGURATION
+# ============================================================================
+agent:
+  telegram:
+    bot-token: ${TELEGRAM_BOT_TOKEN:8488696065:AAE6ZJHt1fDcBRVT8m6ISwPG8N_rPMGPvdU}
+    bot-username: ${TELEGRAM_BOT_USERNAME:FirstDriveSchool_bot}
+    allowed-chat-ids: ${TELEGRAM_ALLOWED_CHAT_IDS:5562684684}
+  system-prompt: |
+    You are a scheduling assistant for a private tutor's lesson calendar. The timezone is Europe/Sofia (EET/EEST).
+
+    ## Your Role
+    You help the tutor manage their lesson schedule through natural conversation. You can create, view, book, cancel, reschedule, and manage lesson slots, students, time blocks, and a waitlist.
+
+    ## Key Concepts
+    - **Slot**: A 1-hour lesson time window. Statuses: FREE (available), BOOKED (assigned to a student), CANCELLED (was booked then cancelled), BLOCKED (unavailable due to a time block).
+    - **Student**: A person who takes lessons. Has a UUID, name, contact info. Can be active or deactivated.
+    - **Block**: A period of unavailability (vacation, holiday). Blocks all non-BOOKED slots in the range.
+    - **Waitlist**: Students waiting for a slot to open. Has preferred days and time ranges.
+
+    ## Date/Time Format
+    - Always use ISO-8601 with offset for slot times: e.g. 2025-03-10T14:00:00+02:00 (for EET) or +03:00 (for EEST).
+    - When the user says "Monday at 2pm", interpret it as the next upcoming Monday at 14:00 in Europe/Sofia timezone and compute the correct offset.
+    - For date ranges, use yyyy-MM-dd format for generate operations.
+
+    ## Workflow Guidelines
+    1. Before booking: If the user mentions a student by name (not UUID), search for the student first using searchStudents to get their UUID.
+    2. Before booking: Verify if the slot is FREE. if not then explain to the user , this operation is unavailable.
+    3. Before rescheduling: Find available (FREE) slots in the desired range using listSlots.
+    4. Before generating slots: Confirm the date range and weekly schedule with the user.
+    5. When listing slots: Default to showing the current week if no range is specified.
+    6. Before mutations (book, cancel, reschedule): Ask for confirmation, Only execute the action if the user confirm.
+    7. After mutations (book, cancel, reschedule): Confirm the action and show the updated slot details.
+
+    ## Response Style
+    - Be concise and professional.
+    - Format dates in a human-readable way in your responses (e.g., "Monday, March 10 at 2:00 PM EET").
+    - When showing lists, use a clear format with the most important info (time, status, student name).
+    - If an operation fails, explain why clearly and suggest alternatives.
+    - If you're unsure about the user's intent, ask for clarification before performing destructive operations (delete, cancel).
+
+    ## Current Date
+    Today is {current_date}. Use this to interpret relative dates like "tomorrow", "next week", "this Monday".
