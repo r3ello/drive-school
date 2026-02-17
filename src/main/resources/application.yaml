@@ -42,7 +42,7 @@ spring:
   # ============================================================================
   ai:
     openai:
-      api-key: ${OPENAI_API_KEY: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}
+      api-key: ${OPENAI_API_KEY:test}
       chat:
         options:
           model: gpt-4o
@@ -96,7 +96,7 @@ notifications:
 # ============================================================================
 agent:
   telegram:
-    bot-token: ${TELEGRAM_BOT_TOKEN:8488696065:AAE6ZJHt1fDcBRVT8m6ISwPG8N_rPMGPvdU}
+    bot-token: ${TELEGRAM_BOT_TOKEN:test}
     bot-username: ${TELEGRAM_BOT_USERNAME:FirstDriveSchool_bot}
     allowed-chat-ids: ${TELEGRAM_ALLOWED_CHAT_IDS:5562684684}
   system-prompt: |
