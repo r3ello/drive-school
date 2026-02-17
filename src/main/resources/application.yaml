@@ -42,7 +42,7 @@ spring:
   # ============================================================================
   ai:
     openai:
-      api-key: ${OPENAI_API_KEY:test}
+      api-key: ${OPENAI_API_KEY:}
       chat:
         options:
           model: gpt-4o
@@ -96,7 +96,7 @@ notifications:
 # ============================================================================
 agent:
   telegram:
-    bot-token: ${TELEGRAM_BOT_TOKEN:test}
+    bot-token: ${TELEGRAM_BOT_TOKEN:}
     bot-username: ${TELEGRAM_BOT_USERNAME:FirstDriveSchool_bot}
     allowed-chat-ids: ${TELEGRAM_ALLOWED_CHAT_IDS:5562684684}
   system-prompt: |
