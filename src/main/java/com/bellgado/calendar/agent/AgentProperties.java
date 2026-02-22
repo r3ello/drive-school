@@ -3,13 +3,13 @@ package com.bellgado.calendar.agent;
 import lombok.Getter;
 import lombok.Setter;
 import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.stereotype.Component;
+import org.springframework.validation.annotation.Validated;
 
 import java.util.ArrayList;
 import java.util.List;
 
-@Component
 @ConfigurationProperties(prefix = "agent")
+@Validated
 @Getter
 @Setter
 public class AgentProperties {

@@ -42,6 +42,7 @@ public class NotificationService {
     private final StudentRepository studentRepository;
     private final NotificationDispatcher dispatcher;
     private final NotificationProperties properties;
+    private final NotificationMessageFactory messageFactory;
 
     /**
      * Creates a notification for a student.
@@ -235,7 +236,7 @@ public class NotificationService {
         notificationRepository.save(notification);
 
         // Build message
-        NotificationMessage message = buildMessage(notification, student);
+        NotificationMessage message = messageFactory.build(notification, student);
 
         // Dispatch
         SendResult result = dispatcher.dispatch(message);
@@ -261,38 +262,6 @@ public class NotificationService {
         }
 
         notificationRepository.save(notification);
-    }
-
-    private NotificationMessage buildMessage(Notification notification, Student student) {
-        String recipient = getRecipientForChannel(student, notification.getChannel());
-
-        // Add standard variables
-        Map<String, String> variables = new HashMap<>(notification.getVariables());
-        variables.putIfAbsent("studentName", student.getFullName());
-        variables.putIfAbsent("studentId", student.getId().toString());
-
-        return NotificationMessage.builder()
-                .notificationId(notification.getId())
-                .studentId(notification.getStudentId())
-                .channel(notification.getChannel())
-                .type(notification.getType())
-                .recipient(recipient)
-                .recipientName(student.getFullName())
-                .templateKey(notification.getTemplateKey())
-                .variables(variables)
-                .subject(notification.getRenderedSubject())
-                .body(notification.getRenderedBody())
-                .locale(student.getLocale())
-                .build();
-    }
-
-    private String getRecipientForChannel(Student student, NotificationChannel channel) {
-        return switch (channel) {
-            case EMAIL -> student.getEmail();
-            case SMS -> student.getPhoneE164();
-            case WHATSAPP -> student.getEffectiveWhatsappNumber();
-            case NONE -> null;
-        };
     }
 
     private ValidationResult validateEligibility(Student student, NotificationChannel channel) {

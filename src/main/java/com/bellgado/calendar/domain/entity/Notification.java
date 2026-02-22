@@ -4,6 +4,7 @@ import com.bellgado.calendar.domain.enums.NotificationChannel;
 import com.bellgado.calendar.domain.enums.NotificationStatus;
 import com.bellgado.calendar.domain.enums.NotificationType;
 import jakarta.persistence.*;
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -30,10 +31,12 @@ import java.util.UUID;
 @Getter
 @Setter
 @NoArgsConstructor
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 public class Notification {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
+    @EqualsAndHashCode.Include
     private UUID id;
 
     // ============================================================================

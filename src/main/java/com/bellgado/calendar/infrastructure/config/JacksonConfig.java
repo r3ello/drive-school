@@ -7,6 +7,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
 
+import java.util.TimeZone;
+
 @Configuration
 public class JacksonConfig {
 
@@ -16,6 +18,10 @@ public class JacksonConfig {
         ObjectMapper mapper = new ObjectMapper();
         mapper.registerModule(new JavaTimeModule());
         mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+        // Serialize OffsetDateTime in Europe/Sofia timezone so JSON times match the UI display.
+        // Without this the custom @Primary bean silently ignores spring.jackson.time-zone.
+        mapper.setTimeZone(TimeZone.getTimeZone("Europe/Sofia"));
+        mapper.enable(SerializationFeature.WRITE_DATES_WITH_CONTEXT_TIME_ZONE);
         return mapper;
     }
 }

@@ -4,6 +4,9 @@ const App = {
     sidebarOpen: true,
 
     init() {
+        // Connect SSE for real-time updates
+        SSE.connect();
+
         // Initialize components
         Modal.init();
         Toast.init();

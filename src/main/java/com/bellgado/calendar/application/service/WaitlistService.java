@@ -10,6 +10,7 @@ import com.bellgado.calendar.infrastructure.specification.WaitlistSpecifications
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -21,6 +22,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class WaitlistService {
 
     private final WaitlistRepository waitlistRepository;
@@ -43,7 +45,8 @@ public class WaitlistService {
             try {
                 preferredTimeRanges = objectMapper.writeValueAsString(request.preferredTimeRanges());
             } catch (JsonProcessingException e) {
-                preferredTimeRanges = null;
+                log.error("Failed to serialize preferredTimeRanges for student {}: {}", request.studentId(), e.getMessage(), e);
+                throw new IllegalStateException("Could not serialize preferred time ranges", e);
             }
         }
 
@@ -73,5 +76,17 @@ public class WaitlistService {
                 .orElseThrow(() -> new NotFoundException("Waitlist item not found: " + id));
         item.setActive(false);
         waitlistRepository.save(item);
+    }
+
+    /**
+     * Soft-deletes all active waitlist entries for the given student.
+     * Called automatically when a student is booked into a slot.
+     */
+    @Transactional
+    public void removeActiveByStudentId(UUID studentId) {
+        int removed = waitlistRepository.deactivateAllActiveByStudentId(studentId);
+        if (removed > 0) {
+            log.info("Removed {} active waitlist entry/entries for student {} after booking.", removed, studentId);
+        }
     }
 }

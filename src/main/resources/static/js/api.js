@@ -210,39 +210,59 @@ const API = {
 };
 
 // Utility functions
+const SOFIA_TZ = 'Europe/Sofia';
+
 const Utils = {
-    formatDate(dateString) {
-        const date = new Date(dateString);
-        return date.toLocaleDateString('en-US', {
+    // Returns the hour (0-23) of a Date in Sofia timezone.
+    getSofiaHour(date) {
+        const d = date instanceof Date ? date : new Date(date);
+        const parts = new Intl.DateTimeFormat('en-US', {
+            hour: 'numeric', hour12: false, timeZone: SOFIA_TZ
+        }).formatToParts(d);
+        return parseInt(parts.find(p => p.type === 'hour').value) % 24;
+    },
+
+    // Returns "YYYY-MM-DD" string in Sofia timezone — used for day-column matching.
+    getSofiaDateKey(date) {
+        const d = date instanceof Date ? date : new Date(date);
+        return new Intl.DateTimeFormat('en-CA', { timeZone: SOFIA_TZ }).format(d);
+    },
+
+    formatDate(date) {
+        const d = date instanceof Date ? date : new Date(date);
+        return d.toLocaleDateString('en-US', {
             weekday: 'short',
             month: 'short',
-            day: 'numeric'
+            day: 'numeric',
+            timeZone: SOFIA_TZ
         });
     },
 
     formatTime(dateString) {
-        const date = new Date(dateString);
-        return date.toLocaleTimeString('en-US', {
+        return new Date(dateString).toLocaleTimeString('en-US', {
             hour: '2-digit',
             minute: '2-digit',
-            hour12: false
+            hour12: false,
+            timeZone: SOFIA_TZ
         });
     },
 
     formatDateTime(dateString) {
-        const date = new Date(dateString);
-        return date.toLocaleString('en-US', {
+        return new Date(dateString).toLocaleString('en-US', {
             weekday: 'short',
             month: 'short',
             day: 'numeric',
             hour: '2-digit',
             minute: '2-digit',
-            hour12: false
+            hour12: false,
+            timeZone: SOFIA_TZ
         });
     },
 
+    // Returns "YYYY-MM-DD" in Sofia timezone (avoids the UTC off-by-one for UTC+ browsers).
     formatDateInput(date) {
-        return date.toISOString().slice(0, 10);
+        const d = date instanceof Date ? date : new Date(date);
+        return new Intl.DateTimeFormat('en-CA', { timeZone: SOFIA_TZ }).format(d);
     },
 
     formatDateTimeInput(date) {

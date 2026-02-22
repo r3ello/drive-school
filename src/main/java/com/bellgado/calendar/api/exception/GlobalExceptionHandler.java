@@ -3,8 +3,10 @@ package com.bellgado.calendar.api.exception;
 import com.bellgado.calendar.api.dto.FieldError;
 import com.bellgado.calendar.api.dto.ProblemDetails;
 import com.bellgado.calendar.application.exception.ConflictException;
+import com.bellgado.calendar.application.exception.InvalidStateException;
 import com.bellgado.calendar.application.exception.NotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -20,14 +22,16 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 import java.util.List;
 
 @RestControllerAdvice
+@Slf4j
 public class GlobalExceptionHandler {
 
     private static final String PROBLEM_JSON = "application/problem+json";
+    private static final String PROBLEM_BASE = "https://api.bellgado.com/problems/";
 
     @ExceptionHandler(NotFoundException.class)
     public ResponseEntity<ProblemDetails> handleNotFound(NotFoundException ex, HttpServletRequest request) {
         ProblemDetails problem = ProblemDetails.of(
-                "https://api.bellgado.com/problems/not-found",
+                PROBLEM_BASE + "not-found",
                 "Not Found",
                 HttpStatus.NOT_FOUND.value(),
                 ex.getMessage(),
@@ -41,7 +45,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ConflictException.class)
     public ResponseEntity<ProblemDetails> handleConflict(ConflictException ex, HttpServletRequest request) {
         ProblemDetails problem = ProblemDetails.of(
-                "https://api.bellgado.com/problems/conflict",
+                PROBLEM_BASE + "conflict",
                 "Conflict",
                 HttpStatus.CONFLICT.value(),
                 ex.getMessage(),
@@ -52,10 +56,24 @@ public class GlobalExceptionHandler {
                 .body(problem);
     }
 
+    @ExceptionHandler(InvalidStateException.class)
+    public ResponseEntity<ProblemDetails> handleInvalidState(InvalidStateException ex, HttpServletRequest request) {
+        ProblemDetails problem = ProblemDetails.of(
+                PROBLEM_BASE + "invalid-state",
+                "Unprocessable Entity",
+                HttpStatus.UNPROCESSABLE_ENTITY.value(),
+                ex.getMessage(),
+                request.getRequestURI()
+        );
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
+                .contentType(MediaType.parseMediaType(PROBLEM_JSON))
+                .body(problem);
+    }
+
     @ExceptionHandler(ObjectOptimisticLockingFailureException.class)
     public ResponseEntity<ProblemDetails> handleOptimisticLock(ObjectOptimisticLockingFailureException ex, HttpServletRequest request) {
         ProblemDetails problem = ProblemDetails.of(
-                "https://api.bellgado.com/problems/conflict",
+                PROBLEM_BASE + "conflict",
                 "Conflict",
                 HttpStatus.CONFLICT.value(),
                 "The resource was modified by another request. Please retry.",
@@ -73,7 +91,7 @@ public class GlobalExceptionHandler {
             message = "A slot already exists at this time";
         }
         ProblemDetails problem = ProblemDetails.of(
-                "https://api.bellgado.com/problems/conflict",
+                PROBLEM_BASE + "conflict",
                 "Conflict",
                 HttpStatus.CONFLICT.value(),
                 message,
@@ -91,7 +109,7 @@ public class GlobalExceptionHandler {
                 .toList();
 
         ProblemDetails problem = ProblemDetails.withErrors(
-                "https://api.bellgado.com/problems/validation-error",
+                PROBLEM_BASE + "validation-error",
                 "Validation error",
                 HttpStatus.BAD_REQUEST.value(),
                 "Request validation failed",
@@ -106,7 +124,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(MissingServletRequestParameterException.class)
     public ResponseEntity<ProblemDetails> handleMissingParam(MissingServletRequestParameterException ex, HttpServletRequest request) {
         ProblemDetails problem = ProblemDetails.withErrors(
-                "https://api.bellgado.com/problems/validation-error",
+                PROBLEM_BASE + "validation-error",
                 "Validation error",
                 HttpStatus.BAD_REQUEST.value(),
                 "Missing required parameter",
@@ -121,7 +139,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     public ResponseEntity<ProblemDetails> handleTypeMismatch(MethodArgumentTypeMismatchException ex, HttpServletRequest request) {
         ProblemDetails problem = ProblemDetails.withErrors(
-                "https://api.bellgado.com/problems/validation-error",
+                PROBLEM_BASE + "validation-error",
                 "Validation error",
                 HttpStatus.BAD_REQUEST.value(),
                 "Invalid parameter type",
@@ -136,7 +154,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ProblemDetails> handleNotReadable(HttpMessageNotReadableException ex, HttpServletRequest request) {
         ProblemDetails problem = ProblemDetails.of(
-                "https://api.bellgado.com/problems/validation-error",
+                PROBLEM_BASE + "validation-error",
                 "Validation error",
                 HttpStatus.BAD_REQUEST.value(),
                 "Malformed request body",
@@ -150,7 +168,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ProblemDetails> handleIllegalArgument(IllegalArgumentException ex, HttpServletRequest request) {
         ProblemDetails problem = ProblemDetails.of(
-                "https://api.bellgado.com/problems/validation-error",
+                PROBLEM_BASE + "validation-error",
                 "Validation error",
                 HttpStatus.BAD_REQUEST.value(),
                 ex.getMessage(),
@@ -163,8 +181,9 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ProblemDetails> handleGeneric(Exception ex, HttpServletRequest request) {
+        log.error("Unexpected error processing {}: {}", request.getRequestURI(), ex.getMessage(), ex);
         ProblemDetails problem = ProblemDetails.of(
-                "https://api.bellgado.com/problems/internal-error",
+                PROBLEM_BASE + "internal-error",
                 "Internal Server Error",
                 HttpStatus.INTERNAL_SERVER_ERROR.value(),
                 "An unexpected error occurred",

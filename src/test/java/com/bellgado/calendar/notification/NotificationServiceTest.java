@@ -57,7 +57,8 @@ class NotificationServiceTest {
                 notificationRepository,
                 studentRepository,
                 dispatcher,
-                properties
+                properties,
+                new NotificationMessageFactory()
         );
     }
 
@@ -213,7 +214,8 @@ class NotificationServiceTest {
         void shouldReturnNullWhenNotificationsDisabled() {
             properties.setEnabled(false);
             notificationService = new NotificationService(
-                    notificationRepository, studentRepository, dispatcher, properties
+                    notificationRepository, studentRepository, dispatcher, properties,
+                    new NotificationMessageFactory()
             );
 
             NotificationCreateRequest request = NotificationCreateRequest.simple(

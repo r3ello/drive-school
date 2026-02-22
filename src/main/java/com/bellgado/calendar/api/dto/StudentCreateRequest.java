@@ -13,6 +13,10 @@ public record StudentCreateRequest(
         @Size(min = 1, max = 200)
         String fullName,
 
+        @Pattern(
+                regexp = "^[+]?[\\d\\s()\\-\\.]{1,50}$",
+                message = "Phone may only contain digits, spaces, dashes, dots, parentheses, or a leading +"
+        )
         @Size(max = 50)
         String phone,
 

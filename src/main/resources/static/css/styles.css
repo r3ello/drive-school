@@ -213,6 +213,32 @@ body {
     color: var(--text-primary);
 }
 
+.sse-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    margin-left: auto;
+    transition: background-color 0.4s ease, box-shadow 0.4s ease;
+    border: 2px solid transparent;
+}
+
+.sse-dot--connected {
+    background: #22c55e;
+    border-color: rgba(34, 197, 94, 0.3);
+    animation: sse-pulse 2.5s ease-in-out infinite;
+}
+
+.sse-dot--disconnected {
+    background: #e5e7eb;
+    border-color: #9ca3af;
+}
+
+@keyframes sse-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.4); }
+    50%       { box-shadow: 0 0 0 4px rgba(34, 197, 94, 0); }
+}
+
 /* ============================================
    MAIN CONTENT
    ============================================ */

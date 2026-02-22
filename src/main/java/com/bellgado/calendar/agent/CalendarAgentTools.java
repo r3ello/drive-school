@@ -47,7 +47,8 @@ public class CalendarAgentTools {
             SlotResponse response = slotService.create(request);
             return objectMapper.writeValueAsString(response);
         } catch (Exception e) {
-            return "Error: " + e.getMessage();
+            log.warn("Tool call failed [{}]: {}", e.getClass().getSimpleName(), e.getMessage(), e);
+            return "Error: " + (e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName());
         }
     }
 
@@ -66,7 +67,8 @@ public class CalendarAgentTools {
             SlotGenerateResponse response = slotService.generate(request);
             return objectMapper.writeValueAsString(response);
         } catch (Exception e) {
-            return "Error: " + e.getMessage();
+            log.warn("Tool call failed [{}]: {}", e.getClass().getSimpleName(), e.getMessage(), e);
+            return "Error: " + (e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName());
         }
     }
 
@@ -83,7 +85,8 @@ public class CalendarAgentTools {
                     OffsetDateTime.parse(from), OffsetDateTime.parse(to), statusList);
             return objectMapper.writeValueAsString(response);
         } catch (Exception e) {
-            return "Error: " + e.getMessage();
+            log.warn("Tool call failed [{}]: {}", e.getClass().getSimpleName(), e.getMessage(), e);
+            return "Error: " + (e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName());
         }
     }
 
@@ -101,7 +104,8 @@ public class CalendarAgentTools {
                     OffsetDateTime.parse(from), OffsetDateTime.parse(to), statusList);
             return objectMapper.writeValueAsString(response);
         } catch (Exception e) {
-            return "Error: " + e.getMessage();
+            log.warn("Tool call failed [{}]: {}", e.getClass().getSimpleName(), e.getMessage(), e);
+            return "Error: " + (e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName());
         }
     }
 
@@ -112,7 +116,8 @@ public class CalendarAgentTools {
             SlotResponse response = slotService.getById(UUID.fromString(slotId));
             return objectMapper.writeValueAsString(response);
         } catch (Exception e) {
-            return "Error: " + e.getMessage();
+            log.warn("Tool call failed [{}]: {}", e.getClass().getSimpleName(), e.getMessage(), e);
+            return "Error: " + (e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName());
         }
     }
 
@@ -123,7 +128,8 @@ public class CalendarAgentTools {
             slotService.delete(UUID.fromString(slotId));
             return "Slot " + slotId + " deleted successfully.";
         } catch (Exception e) {
-            return "Error: " + e.getMessage();
+            log.warn("Tool call failed [{}]: {}", e.getClass().getSimpleName(), e.getMessage(), e);
+            return "Error: " + (e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName());
         }
     }
 
@@ -140,7 +146,8 @@ public class CalendarAgentTools {
             SlotResponse response = slotService.book(UUID.fromString(slotId), request);
             return objectMapper.writeValueAsString(response);
         } catch (Exception e) {
-            return "Error: " + e.getMessage();
+            log.warn("Tool call failed [{}]: {}", e.getClass().getSimpleName(), e.getMessage(), e);
+            return "Error: " + (e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName());
         }
     }
 
@@ -157,7 +164,8 @@ public class CalendarAgentTools {
             SlotResponse response = slotService.cancel(UUID.fromString(slotId), request);
             return objectMapper.writeValueAsString(response);
         } catch (Exception e) {
-            return "Error: " + e.getMessage();
+            log.warn("Tool call failed [{}]: {}", e.getClass().getSimpleName(), e.getMessage(), e);
+            return "Error: " + (e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName());
         }
     }
 
@@ -172,7 +180,8 @@ public class CalendarAgentTools {
             SlotResponse response = slotService.free(UUID.fromString(slotId), request);
             return objectMapper.writeValueAsString(response);
         } catch (Exception e) {
-            return "Error: " + e.getMessage();
+            log.warn("Tool call failed [{}]: {}", e.getClass().getSimpleName(), e.getMessage(), e);
+            return "Error: " + (e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName());
         }
     }
 
@@ -189,7 +198,8 @@ public class CalendarAgentTools {
             SlotResponse response = slotService.replace(UUID.fromString(slotId), request);
             return objectMapper.writeValueAsString(response);
         } catch (Exception e) {
-            return "Error: " + e.getMessage();
+            log.warn("Tool call failed [{}]: {}", e.getClass().getSimpleName(), e.getMessage(), e);
+            return "Error: " + (e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName());
         }
     }
 
@@ -207,7 +217,8 @@ public class CalendarAgentTools {
             RescheduleResponse response = slotService.reschedule(UUID.fromString(originSlotId), request);
             return objectMapper.writeValueAsString(response);
         } catch (Exception e) {
-            return "Error: " + e.getMessage();
+            log.warn("Tool call failed [{}]: {}", e.getClass().getSimpleName(), e.getMessage(), e);
+            return "Error: " + (e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName());
         }
     }
 
@@ -215,11 +226,13 @@ public class CalendarAgentTools {
     // STUDENT TOOLS
     // ========================================================================
 
-    @Tool(description = "Create a new student. Only fullName is required. " +
+    @Tool(description = "Create a new student. fullName and phone are required before calling this tool. " +
+            "Collect them from the user first. phone must contain only digits, spaces, dashes, dots, " +
+            "parentheses, or a leading + (e.g. '0888 123 456' or '+359888123456'). " +
             "Returns the created student with their UUID.")
     public String createStudent(
             @ToolParam(description = "Student's full name (required)") String fullName,
-            @ToolParam(description = "Phone number, empty string if none") String phone,
+            @ToolParam(description = "Display phone number — digits, spaces, dashes, dots, parens, optional leading +") String phone,
             @ToolParam(description = "Email address, empty string if none") String email,
             @ToolParam(description = "Notes about the student, empty string if none") String notes) {
         try {
@@ -232,7 +245,8 @@ public class CalendarAgentTools {
             StudentResponse response = studentService.create(request);
             return objectMapper.writeValueAsString(response);
         } catch (Exception e) {
-            return "Error: " + e.getMessage();
+            log.warn("Tool call failed [{}]: {}", e.getClass().getSimpleName(), e.getMessage(), e);
+            return "Error: " + (e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName());
         }
     }
 
@@ -252,7 +266,8 @@ public class CalendarAgentTools {
                     Pageable.ofSize(20));
             return objectMapper.writeValueAsString(response.getContent());
         } catch (Exception e) {
-            return "Error: " + e.getMessage();
+            log.warn("Tool call failed [{}]: {}", e.getClass().getSimpleName(), e.getMessage(), e);
+            return "Error: " + (e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName());
         }
     }
 
@@ -263,7 +278,8 @@ public class CalendarAgentTools {
             StudentResponse response = studentService.getById(UUID.fromString(studentId));
             return objectMapper.writeValueAsString(response);
         } catch (Exception e) {
-            return "Error: " + e.getMessage();
+            log.warn("Tool call failed [{}]: {}", e.getClass().getSimpleName(), e.getMessage(), e);
+            return "Error: " + (e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName());
         }
     }
 
@@ -274,7 +290,8 @@ public class CalendarAgentTools {
             studentService.deactivate(UUID.fromString(studentId));
             return "Student " + studentId + " deactivated successfully.";
         } catch (Exception e) {
-            return "Error: " + e.getMessage();
+            log.warn("Tool call failed [{}]: {}", e.getClass().getSimpleName(), e.getMessage(), e);
+            return "Error: " + (e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName());
         }
     }
 
@@ -282,9 +299,37 @@ public class CalendarAgentTools {
     // BLOCK TOOLS
     // ========================================================================
 
+    @Tool(description = "Block a single FREE or CANCELLED slot by its UUID, making it BLOCKED (unavailable). " +
+            "Prefer this over createBlock for blocking individual time slots. " +
+            "BOOKED slots cannot be blocked — cancel them first.")
+    public String blockSlot(
+            @ToolParam(description = "Slot UUID to block") String slotId) {
+        try {
+            SlotResponse response = slotService.blockSlot(UUID.fromString(slotId));
+            return objectMapper.writeValueAsString(response);
+        } catch (Exception e) {
+            log.warn("Tool call failed [{}]: {}", e.getClass().getSimpleName(), e.getMessage(), e);
+            return "Error: " + (e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName());
+        }
+    }
+
+    @Tool(description = "Unblock a single BLOCKED slot by its UUID, restoring it to FREE status. " +
+            "Only unblocks this one slot — other slots in the same block group are not affected.")
+    public String unblockSlot(
+            @ToolParam(description = "Slot UUID to unblock") String slotId) {
+        try {
+            SlotResponse response = slotService.unblockSlot(UUID.fromString(slotId));
+            return objectMapper.writeValueAsString(response);
+        } catch (Exception e) {
+            log.warn("Tool call failed [{}]: {}", e.getClass().getSimpleName(), e.getMessage(), e);
+            return "Error: " + (e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName());
+        }
+    }
+
     @Tool(description = "Create a time block (vacation, holiday, unavailable period). " +
             "All non-BOOKED slots in the range are blocked. New BLOCKED slots are created for empty hours. " +
-            "BOOKED slots are not affected.")
+            "BOOKED slots are not affected. " +
+            "NOTE: To block a single individual slot use blockSlot(slotId) instead.")
     public String createBlock(
             @ToolParam(description = "Block start in ISO-8601 format") String from,
             @ToolParam(description = "Block end in ISO-8601 format") String to,
@@ -296,7 +341,8 @@ public class CalendarAgentTools {
             BlockResponse response = blockService.create(request);
             return objectMapper.writeValueAsString(response);
         } catch (Exception e) {
-            return "Error: " + e.getMessage();
+            log.warn("Tool call failed [{}]: {}", e.getClass().getSimpleName(), e.getMessage(), e);
+            return "Error: " + (e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName());
         }
     }
 
@@ -310,7 +356,8 @@ public class CalendarAgentTools {
                     OffsetDateTime.parse(from), OffsetDateTime.parse(to));
             return objectMapper.writeValueAsString(response);
         } catch (Exception e) {
-            return "Error: " + e.getMessage();
+            log.warn("Tool call failed [{}]: {}", e.getClass().getSimpleName(), e.getMessage(), e);
+            return "Error: " + (e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName());
         }
     }
 
@@ -322,7 +369,8 @@ public class CalendarAgentTools {
             blockService.delete(UUID.fromString(blockId));
             return "Block " + blockId + " deleted and slots unblocked successfully.";
         } catch (Exception e) {
-            return "Error: " + e.getMessage();
+            log.warn("Tool call failed [{}]: {}", e.getClass().getSimpleName(), e.getMessage(), e);
+            return "Error: " + (e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName());
         }
     }
 
@@ -364,7 +412,8 @@ public class CalendarAgentTools {
             WaitlistResponse response = waitlistService.add(request);
             return objectMapper.writeValueAsString(response);
         } catch (Exception e) {
-            return "Error: " + e.getMessage();
+            log.warn("Tool call failed [{}]: {}", e.getClass().getSimpleName(), e.getMessage(), e);
+            return "Error: " + (e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName());
         }
     }
 
@@ -375,7 +424,8 @@ public class CalendarAgentTools {
             waitlistService.remove(UUID.fromString(waitlistItemId));
             return "Waitlist entry " + waitlistItemId + " removed successfully.";
         } catch (Exception e) {
-            return "Error: " + e.getMessage();
+            log.warn("Tool call failed [{}]: {}", e.getClass().getSimpleName(), e.getMessage(), e);
+            return "Error: " + (e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName());
         }
     }
 

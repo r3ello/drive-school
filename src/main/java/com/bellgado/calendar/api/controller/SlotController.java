@@ -92,4 +92,14 @@ public class SlotController {
     ) {
         return ResponseEntity.ok(slotService.reschedule(slotId, request));
     }
+
+    @PostMapping("/{slotId}/block")
+    public ResponseEntity<SlotResponse> blockSlot(@PathVariable UUID slotId) {
+        return ResponseEntity.ok(slotService.blockSlot(slotId));
+    }
+
+    @PostMapping("/{slotId}/unblock")
+    public ResponseEntity<SlotResponse> unblockSlot(@PathVariable UUID slotId) {
+        return ResponseEntity.ok(slotService.unblockSlot(slotId));
+    }
 }

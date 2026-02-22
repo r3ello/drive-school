@@ -10,6 +10,7 @@ import org.springframework.stereotype.Repository;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 @Repository
@@ -19,6 +20,9 @@ public interface SlotRepository extends JpaRepository<Slot, UUID>, JpaSpecificat
     Optional<Slot> findByIdWithStudent(@Param("id") UUID id);
 
     boolean existsByStartAt(OffsetDateTime startAt);
+
+    @Query("SELECT s.startAt FROM Slot s WHERE s.startAt >= :from AND s.startAt < :to")
+    Set<OffsetDateTime> findStartAtBetween(@Param("from") OffsetDateTime from, @Param("to") OffsetDateTime to);
 
     List<Slot> findByBlockId(UUID blockId);
 }

@@ -1,14 +1,17 @@
 package com.bellgado.calendar.application.service;
 
+import com.bellgado.calendar.api.dto.NotificationPreferencesRequest;
 import com.bellgado.calendar.api.dto.StudentCreateRequest;
 import com.bellgado.calendar.api.dto.StudentResponse;
 import com.bellgado.calendar.api.dto.StudentUpdateRequest;
+import com.bellgado.calendar.api.sse.SseEventType;
+import com.bellgado.calendar.application.event.StudentChangedEvent;
 import com.bellgado.calendar.application.exception.NotFoundException;
 import com.bellgado.calendar.domain.entity.Student;
-import com.bellgado.calendar.domain.enums.NotificationChannel;
 import com.bellgado.calendar.infrastructure.repository.StudentRepository;
 import com.bellgado.calendar.infrastructure.specification.StudentSpecifications;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -21,6 +24,7 @@ import java.util.UUID;
 public class StudentService {
 
     private final StudentRepository studentRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
     public StudentResponse create(StudentCreateRequest request) {
@@ -58,7 +62,9 @@ public class StudentService {
         }
 
         student = studentRepository.save(student);
-        return StudentResponse.from(student);
+        StudentResponse response = StudentResponse.from(student);
+        eventPublisher.publishEvent(new StudentChangedEvent(SseEventType.STUDENT_CREATED, response));
+        return response;
     }
 
     @Transactional(readOnly = true)
@@ -119,7 +125,9 @@ public class StudentService {
         student.setQuietHoursEnd(request.quietHoursEnd());
 
         student = studentRepository.save(student);
-        return StudentResponse.from(student);
+        StudentResponse response = StudentResponse.from(student);
+        eventPublisher.publishEvent(new StudentChangedEvent(SseEventType.STUDENT_UPDATED, response));
+        return response;
     }
 
     @Transactional
@@ -127,7 +135,8 @@ public class StudentService {
         Student student = studentRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Student not found: " + id));
         student.setActive(false);
-        studentRepository.save(student);
+        student = studentRepository.save(student);
+        eventPublisher.publishEvent(new StudentChangedEvent(SseEventType.STUDENT_DEACTIVATED, StudentResponse.from(student)));
     }
 
     /**
@@ -160,20 +169,9 @@ public class StudentService {
         student.setQuietHoursEnd(request.quietHoursEnd());
 
         student = studentRepository.save(student);
-        return StudentResponse.from(student);
+        StudentResponse response = StudentResponse.from(student);
+        eventPublisher.publishEvent(new StudentChangedEvent(SseEventType.STUDENT_UPDATED, response));
+        return response;
     }
 
-    /**
-     * Request for updating notification preferences only.
-     */
-    public record NotificationPreferencesRequest(
-            NotificationChannel preferredChannel,
-            Boolean optIn,
-            String phoneE164,
-            String whatsappNumberE164,
-            String timezone,
-            String locale,
-            java.time.LocalTime quietHoursStart,
-            java.time.LocalTime quietHoursEnd
-    ) {}
 }

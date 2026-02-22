@@ -257,7 +257,7 @@ const Calendar = {
         for (let i = 0; i < 42; i++) {
             const cellDate = new Date(current);
             const isOtherMonth = cellDate.getMonth() !== this.currentMonth.month;
-            const isToday = cellDate.toDateString() === today.toDateString();
+            const isToday = Utils.getSofiaDateKey(cellDate) === Utils.getSofiaDateKey(today);
 
             const cell = document.createElement('div');
             cell.className = 'month-cell';
@@ -270,11 +270,11 @@ const Calendar = {
             dateDiv.textContent = cellDate.getDate();
             cell.appendChild(dateDiv);
 
-            // Slots for this day
-            const daySlots = this.slots.filter(slot => {
-                const slotDate = new Date(slot.startAt);
-                return slotDate.toDateString() === cellDate.toDateString();
-            });
+            // Slots for this day — compare in Sofia timezone
+            const cellDateKey = Utils.getSofiaDateKey(cellDate);
+            const daySlots = this.slots.filter(slot =>
+                Utils.getSofiaDateKey(new Date(slot.startAt)) === cellDateKey
+            );
 
             if (daySlots.length > 0) {
                 // Show colored dots (max 8, then "+N")
@@ -337,13 +337,16 @@ const Calendar = {
     createDayHeader(date) {
         const header = document.createElement('div');
         header.className = 'calendar-header';
-        const today = new Date();
-        if (date.toDateString() === today.toDateString()) {
+        if (Utils.getSofiaDateKey(date) === Utils.getSofiaDateKey(new Date())) {
             header.classList.add('is-today');
         }
+        // Derive day-name and day-number from the Sofia date key so non-Sofia
+        // browsers also show the correct Sofia calendar date.
+        const [year, month, day] = Utils.getSofiaDateKey(date).split('-').map(Number);
+        const sofiaDate = new Date(year, month - 1, day);
         header.innerHTML = `
-            <small>${Utils.getShortDayName(date.getDay())}</small>
-            <span class="day-number">${date.getDate()}</span>
+            <small>${Utils.getShortDayName(sofiaDate.getDay())}</small>
+            <span class="day-number">${sofiaDate.getDate()}</span>
         `;
         return header;
     },
@@ -369,16 +372,15 @@ const Calendar = {
             column.appendChild(row);
         }
 
-        // Add slots for this day
-        const daySlots = this.slots.filter(slot => {
-            const slotDate = new Date(slot.startAt);
-            return slotDate.toDateString() === date.toDateString();
-        });
+        // Add slots for this day — compare dates and place by hour in Sofia timezone
+        const colDateKey = Utils.getSofiaDateKey(date);
+        const daySlots = this.slots.filter(slot =>
+            Utils.getSofiaDateKey(new Date(slot.startAt)) === colDateKey
+        );
 
         daySlots.forEach(slot => {
             const slotElement = this.createSlotElement(slot);
-            const slotDate = new Date(slot.startAt);
-            const hour = slotDate.getHours();
+            const hour = Utils.getSofiaHour(new Date(slot.startAt));
             const hourRow = column.querySelector(`[data-hour="${hour}"]`);
             if (hourRow) {
                 hourRow.appendChild(slotElement);

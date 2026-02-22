@@ -1,6 +1,7 @@
 package com.bellgado.calendar.api.controller;
 
 import com.bellgado.calendar.api.dto.*;
+import com.bellgado.calendar.api.util.PaginationUtils;
 import com.bellgado.calendar.application.service.SlotService;
 import com.bellgado.calendar.application.service.StudentService;
 import com.bellgado.calendar.domain.enums.SlotStatus;
@@ -21,7 +22,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.UUID;
 
@@ -48,7 +49,7 @@ public class StudentController {
             @RequestParam(defaultValue = "20") @Min(1) @Max(200) int size,
             @RequestParam(defaultValue = "fullName,asc") String sort
     ) {
-        Pageable pageable = createPageable(page, size, sort);
+        Pageable pageable = PaginationUtils.createPageable(page, size, sort);
         Page<StudentResponse> students = studentService.list(query, active, pageable);
         return ResponseEntity.ok(StudentPageResponse.from(students));
     }
@@ -79,8 +80,9 @@ public class StudentController {
             @RequestParam LocalDate to,
             @RequestParam(required = false) List<SlotStatus> status
     ) {
-        OffsetDateTime fromDateTime = from.atStartOfDay().atOffset(ZoneOffset.UTC);
-        OffsetDateTime toDateTime = to.plusDays(1).atStartOfDay().atOffset(ZoneOffset.UTC);
+        ZoneId appZone = ZoneId.of("Europe/Sofia");
+        OffsetDateTime fromDateTime = from.atStartOfDay(appZone).toOffsetDateTime();
+        OffsetDateTime toDateTime = to.plusDays(1).atStartOfDay(appZone).toOffsetDateTime();
         List<SlotResponse> slots = slotService.listByStudent(studentId, fromDateTime, toDateTime, status);
         return ResponseEntity.ok(new SlotListResponse(slots));
     }
@@ -91,7 +93,7 @@ public class StudentController {
     @PatchMapping("/{studentId}/notification-preferences")
     public ResponseEntity<StudentResponse> updateNotificationPreferences(
             @PathVariable UUID studentId,
-            @Valid @RequestBody StudentService.NotificationPreferencesRequest request
+            @Valid @RequestBody NotificationPreferencesRequest request
     ) {
         return ResponseEntity.ok(studentService.updateNotificationPreferences(studentId, request));
     }
@@ -110,33 +112,4 @@ public class StudentController {
         return ResponseEntity.ok(NotificationPageResponse.from(notifications));
     }
 
-    /**
-     * Page response for notifications.
-     */
-    public record NotificationPageResponse(
-            List<NotificationResponse> content,
-            int page,
-            int size,
-            long totalElements,
-            int totalPages
-    ) {
-        public static NotificationPageResponse from(Page<NotificationResponse> page) {
-            return new NotificationPageResponse(
-                    page.getContent(),
-                    page.getNumber(),
-                    page.getSize(),
-                    page.getTotalElements(),
-                    page.getTotalPages()
-            );
-        }
-    }
-
-    private Pageable createPageable(int page, int size, String sort) {
-        String[] parts = sort.split(",");
-        String property = parts[0];
-        Sort.Direction direction = parts.length > 1 && parts[1].equalsIgnoreCase("desc")
-                ? Sort.Direction.DESC
-                : Sort.Direction.ASC;
-        return PageRequest.of(page, size, Sort.by(direction, property));
-    }
 }
