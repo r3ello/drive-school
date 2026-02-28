@@ -141,7 +141,7 @@ notifications:
 sse:
   cors:
     allowed-origins:
-      - ${ORIGIN_BELLGADO}
+      - https://bellgadolab-driveschool.tsrivx.easypanel.host
       - http://localhost:8080
       - http://localhost:5173
   emitter:
