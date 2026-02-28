@@ -6,7 +6,9 @@ import com.bellgado.calendar.api.dto.StudentUpdateRequest;
 import com.bellgado.calendar.api.sse.SseEventType;
 import com.bellgado.calendar.application.event.StudentChangedEvent;
 import com.bellgado.calendar.domain.entity.Student;
+import com.bellgado.calendar.application.service.AuthEmailService;
 import com.bellgado.calendar.infrastructure.repository.StudentRepository;
+import com.bellgado.calendar.infrastructure.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -14,6 +16,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.Optional;
 import java.util.UUID;
@@ -31,11 +34,21 @@ class StudentServiceTest {
     @Mock
     private ApplicationEventPublisher eventPublisher;
 
+    @Mock
+    private UserRepository userRepository;
+
+    @Mock
+    private PasswordEncoder passwordEncoder;
+
+    @Mock
+    private AuthEmailService authEmailService;
+
     private StudentService studentService;
 
     @BeforeEach
     void setUp() {
-        studentService = new StudentService(studentRepository, eventPublisher);
+        studentService = new StudentService(studentRepository, eventPublisher,
+                userRepository, passwordEncoder, authEmailService);
     }
 
     // =========================================================================

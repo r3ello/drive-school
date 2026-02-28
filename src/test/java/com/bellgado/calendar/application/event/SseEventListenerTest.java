@@ -18,6 +18,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.OffsetDateTime;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -44,10 +45,11 @@ class SseEventListenerTest {
     @Test
     void onSlotChanged_shouldBroadcastWithCorrectEventType() {
         UUID slotId = UUID.randomUUID();
+        UUID studentId = UUID.randomUUID();
         OffsetDateTime now = OffsetDateTime.now();
 
         SlotEventResponse slotEvent = new SlotEventResponse(
-                UUID.randomUUID(), slotId, EventType.BOOKED, now, null, UUID.randomUUID(), null);
+                UUID.randomUUID(), slotId, EventType.BOOKED, now, null, studentId, null);
         SlotResponse slot = new SlotResponse(
                 slotId, now, now.plusHours(1), SlotStatus.BOOKED, null, null, 1, now, now);
 
@@ -56,13 +58,17 @@ class SseEventListenerTest {
         listener.onSlotChanged(event);
 
         ArgumentCaptor<Object> payloadCaptor = ArgumentCaptor.forClass(Object.class);
-        verify(registry).broadcast(eq(SseEventType.SLOT_BOOKED), eq(now.toString()), payloadCaptor.capture());
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<Set<UUID>> studentIdsCaptor = ArgumentCaptor.forClass(Set.class);
+        verify(registry).broadcast(eq(SseEventType.SLOT_BOOKED), eq(now.toString()),
+                payloadCaptor.capture(), studentIdsCaptor.capture());
 
         SlotSsePayload payload = (SlotSsePayload) payloadCaptor.getValue();
         assertEquals(SseEventType.SLOT_BOOKED, payload.eventType());
         assertEquals(slotEvent, payload.slotEvent());
         assertEquals(slot, payload.slot());
         assertNotNull(payload.timestamp());
+        assertTrue(studentIdsCaptor.getValue().contains(studentId));
     }
 
     @Test
@@ -79,7 +85,7 @@ class SseEventListenerTest {
 
         listener.onSlotChanged(event);
 
-        verify(registry).broadcast(eq(SseEventType.SLOT_CREATED), eq(at.toString()), any());
+        verify(registry).broadcast(eq(SseEventType.SLOT_CREATED), eq(at.toString()), any(), any());
     }
 
     @Test
@@ -88,7 +94,7 @@ class SseEventListenerTest {
 
         // Should not throw; eventId will be null
         assertDoesNotThrow(() -> listener.onSlotChanged(event));
-        verify(registry).broadcast(eq(SseEventType.SLOT_CREATED), isNull(), any());
+        verify(registry).broadcast(eq(SseEventType.SLOT_CREATED), isNull(), any(), isNull());
     }
 
     // =========================================================================
@@ -97,9 +103,10 @@ class SseEventListenerTest {
 
     @Test
     void onStudentChanged_shouldBroadcastWithCorrectEventType() {
+        UUID studentId = UUID.randomUUID();
         StudentResponse student = new StudentResponse(
-                UUID.randomUUID(), "Jane Doe", null, null, null, true,
-                null, false, null, null, null, null, null, null, null,
+                studentId, "Jane Doe", null, null, null, true,
+                null, false, null, false, null, null, null, null, null, null, null,
                 OffsetDateTime.now(), OffsetDateTime.now());
 
         StudentChangedEvent event = new StudentChangedEvent(SseEventType.STUDENT_CREATED, student);
@@ -107,25 +114,31 @@ class SseEventListenerTest {
         listener.onStudentChanged(event);
 
         ArgumentCaptor<Object> payloadCaptor = ArgumentCaptor.forClass(Object.class);
-        verify(registry).broadcast(eq(SseEventType.STUDENT_CREATED), isNull(), payloadCaptor.capture());
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<Set<UUID>> studentIdsCaptor = ArgumentCaptor.forClass(Set.class);
+        verify(registry).broadcast(eq(SseEventType.STUDENT_CREATED), isNull(),
+                payloadCaptor.capture(), studentIdsCaptor.capture());
 
         StudentSsePayload payload = (StudentSsePayload) payloadCaptor.getValue();
         assertEquals(SseEventType.STUDENT_CREATED, payload.eventType());
         assertEquals(student, payload.student());
         assertNotNull(payload.timestamp());
+        assertTrue(studentIdsCaptor.getValue().contains(studentId));
     }
 
     @Test
     void onStudentChanged_shouldBroadcastDeactivatedWithCorrectType() {
+        UUID studentId = UUID.randomUUID();
         StudentResponse student = new StudentResponse(
-                UUID.randomUUID(), "John Doe", null, null, null, false,
-                null, false, null, null, null, null, null, null, null,
+                studentId, "John Doe", null, null, null, false,
+                null, false, null, false, null, null, null, null, null, null, null,
                 OffsetDateTime.now(), OffsetDateTime.now());
 
         StudentChangedEvent event = new StudentChangedEvent(SseEventType.STUDENT_DEACTIVATED, student);
 
         listener.onStudentChanged(event);
 
-        verify(registry).broadcast(eq(SseEventType.STUDENT_DEACTIVATED), isNull(), any(StudentSsePayload.class));
+        verify(registry).broadcast(eq(SseEventType.STUDENT_DEACTIVATED), isNull(),
+                any(StudentSsePayload.class), any());
     }
 }

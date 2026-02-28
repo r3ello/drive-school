@@ -111,6 +111,8 @@ const Calendar = {
     },
 
     async loadStudentsCache() {
+        // Students are only needed for TEACHER/ADMIN (booking dropdowns)
+        if (typeof Auth !== 'undefined' && Auth.isStudent()) return;
         try {
             const response = await API.getStudents({ active: true, size: 200 });
             this.students = response.content || [];
@@ -123,16 +125,24 @@ const Calendar = {
     async load() {
         this.updatePeriodLabel();
 
+        // ISO datetimes for teacher/admin endpoints
         let from, to;
+        // LocalDate strings (YYYY-MM-DD) for the student endpoint — server adds 1 day to `to`
+        let fromDate, toDate;
+
         switch (this.viewMode) {
             case 'day':
                 from = Utils.toISOString(Utils.startOfDay(this.currentDate));
                 to = Utils.toISOString(Utils.addDays(Utils.startOfDay(this.currentDate), 1));
+                fromDate = Utils.getSofiaDateKey(this.currentDate);
+                toDate = fromDate; // server adds 1 day → covers the full day
                 break;
             case 'week': {
                 const weekEnd = Utils.getWeekEnd(this.currentWeekStart);
                 from = Utils.toISOString(this.currentWeekStart);
                 to = Utils.toISOString(Utils.addDays(weekEnd, 1));
+                fromDate = Utils.getSofiaDateKey(this.currentWeekStart);
+                toDate = Utils.getSofiaDateKey(weekEnd); // server adds 1 day → covers through Sunday
                 break;
             }
             case 'month': {
@@ -143,12 +153,20 @@ const Calendar = {
                 const gridEnd = Utils.getWeekEnd(monthEnd);
                 from = Utils.toISOString(gridStart);
                 to = Utils.toISOString(Utils.addDays(gridEnd, 1));
+                fromDate = Utils.getSofiaDateKey(gridStart);
+                toDate = Utils.getSofiaDateKey(gridEnd); // server adds 1 day → covers through last cell
                 break;
             }
         }
 
         try {
-            const response = await API.getSlots(from, to);
+            let response;
+            if (typeof Auth !== 'undefined' && Auth.isStudent()) {
+                const user = Auth.getUser();
+                response = await API.getStudentSlots(user.studentId, fromDate, toDate);
+            } else {
+                response = await API.getSlots(from, to);
+            }
             this.slots = response.content || [];
             this.render();
         } catch (error) {
@@ -362,12 +380,14 @@ const Calendar = {
             row.dataset.hour = hour;
             row.dataset.date = Utils.formatDateInput(date);
 
-            // Allow clicking empty space to create slot
-            row.addEventListener('click', (e) => {
-                if (e.target === row || e.target.classList.contains('calendar-hour-row')) {
-                    this.showQuickAddSlotModal(date, hour);
-                }
-            });
+            // Allow clicking empty space to create slot (TEACHER/ADMIN only)
+            if (typeof Auth === 'undefined' || !Auth.isStudent()) {
+                row.addEventListener('click', (e) => {
+                    if (e.target === row || e.target.classList.contains('calendar-hour-row')) {
+                        this.showQuickAddSlotModal(date, hour);
+                    }
+                });
+            }
 
             column.appendChild(row);
         }
@@ -422,30 +442,33 @@ const Calendar = {
             const events = eventsResponse.content;
 
             let actionsHtml = '';
-            switch (freshSlot.status) {
-                case 'FREE':
-                    actionsHtml = `
-                        <button class="btn btn-success" id="bookSlotBtn">Book</button>
-                        <button class="btn btn-danger" id="deleteSlotBtn">Delete</button>
-                    `;
-                    break;
-                case 'BOOKED':
-                    actionsHtml = `
-                        <button class="btn btn-warning" id="cancelSlotBtn">Cancel</button>
-                        <button class="btn btn-secondary" id="replaceSlotBtn">Replace Student</button>
-                        <button class="btn btn-primary" id="rescheduleSlotBtn">Reschedule</button>
-                        <button class="btn btn-secondary" id="freeSlotBtn">Free</button>
-                    `;
-                    break;
-                case 'CANCELLED':
-                    actionsHtml = `
-                        <button class="btn btn-success" id="freeSlotBtn">Free</button>
-                        <button class="btn btn-secondary" id="replaceSlotBtn">Replace & Rebook</button>
-                    `;
-                    break;
-                case 'BLOCKED':
-                    actionsHtml = `<p style="color: var(--text-tertiary); font-size: 0.875rem;">This slot is blocked.</p>`;
-                    break;
+            const isTeacherOrAdmin = typeof Auth === 'undefined' || !Auth.isStudent();
+            if (isTeacherOrAdmin) {
+                switch (freshSlot.status) {
+                    case 'FREE':
+                        actionsHtml = `
+                            <button class="btn btn-success" id="bookSlotBtn">Book</button>
+                            <button class="btn btn-danger" id="deleteSlotBtn">Delete</button>
+                        `;
+                        break;
+                    case 'BOOKED':
+                        actionsHtml = `
+                            <button class="btn btn-warning" id="cancelSlotBtn">Cancel</button>
+                            <button class="btn btn-secondary" id="replaceSlotBtn">Replace Student</button>
+                            <button class="btn btn-primary" id="rescheduleSlotBtn">Reschedule</button>
+                            <button class="btn btn-secondary" id="freeSlotBtn">Free</button>
+                        `;
+                        break;
+                    case 'CANCELLED':
+                        actionsHtml = `
+                            <button class="btn btn-success" id="freeSlotBtn">Free</button>
+                            <button class="btn btn-secondary" id="replaceSlotBtn">Replace & Rebook</button>
+                        `;
+                        break;
+                    case 'BLOCKED':
+                        actionsHtml = `<p style="color: var(--text-tertiary); font-size: 0.875rem;">This slot is blocked.</p>`;
+                        break;
+                }
             }
 
             const eventsHtml = events.length > 0 ? `

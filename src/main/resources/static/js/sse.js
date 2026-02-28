@@ -20,8 +20,10 @@ const SSE = {
             this.eventSource.close();
         }
 
+        const token = (typeof Auth !== 'undefined') ? Auth.getAccessToken() : null;
+        const url = '/api/v1/stream' + (token ? '?token=' + encodeURIComponent(token) : '');
         console.log('[SSE] Connecting to /api/v1/stream…');
-        this.eventSource = new EventSource('/api/v1/stream');
+        this.eventSource = new EventSource(url);
 
         this.eventSource.onopen = () => {
             console.log('[SSE] Connected');
@@ -92,6 +94,10 @@ const SSE = {
     debounce(key, fn, delay) {
         clearTimeout(this.debounceTimers[key]);
         this.debounceTimers[key] = setTimeout(fn, delay);
+    },
+
+    reconnect() {
+        this.connect();
     },
 
     setStatus(status) {

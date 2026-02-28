@@ -13,6 +13,9 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -27,6 +30,34 @@ public class GlobalExceptionHandler {
 
     private static final String PROBLEM_JSON = "application/problem+json";
     private static final String PROBLEM_BASE = "https://api.bellgado.com/problems/";
+
+    @ExceptionHandler({AuthenticationException.class, BadCredentialsException.class})
+    public ResponseEntity<ProblemDetails> handleUnauthorized(Exception ex, HttpServletRequest request) {
+        ProblemDetails problem = ProblemDetails.of(
+                PROBLEM_BASE + "unauthorized",
+                "Unauthorized",
+                HttpStatus.UNAUTHORIZED.value(),
+                ex.getMessage(),
+                request.getRequestURI()
+        );
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .contentType(MediaType.parseMediaType(PROBLEM_JSON))
+                .body(problem);
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ProblemDetails> handleForbidden(AccessDeniedException ex, HttpServletRequest request) {
+        ProblemDetails problem = ProblemDetails.of(
+                PROBLEM_BASE + "forbidden",
+                "Forbidden",
+                HttpStatus.FORBIDDEN.value(),
+                "You do not have permission to access this resource",
+                request.getRequestURI()
+        );
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .contentType(MediaType.parseMediaType(PROBLEM_JSON))
+                .body(problem);
+    }
 
     @ExceptionHandler(NotFoundException.class)
     public ResponseEntity<ProblemDetails> handleNotFound(NotFoundException ex, HttpServletRequest request) {

@@ -2,11 +2,15 @@ package com.bellgado.calendar.api.sse;
 
 import com.bellgado.calendar.api.dto.SlotEventResponse;
 import com.bellgado.calendar.api.dto.SlotResponse;
+import com.bellgado.calendar.api.sse.SseEmitterRegistry.EmitterMeta;
 import com.bellgado.calendar.application.service.SlotEventService;
 import com.bellgado.calendar.application.service.SlotService;
 import com.bellgado.calendar.domain.entity.SlotEvent;
 import com.bellgado.calendar.domain.enums.EventType;
+import com.bellgado.calendar.domain.enums.UserRole;
+import com.bellgado.calendar.infrastructure.security.JwtTokenProvider;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -14,9 +18,11 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import java.io.IOException;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeParseException;
 import java.util.List;
@@ -42,24 +48,51 @@ public class SseController {
     private final SlotEventService slotEventService;
     private final SlotService slotService;
     private final ObjectMapper objectMapper;
+    private final JwtTokenProvider tokenProvider;
 
     @GetMapping(produces = "text/event-stream")
     public SseEmitter stream(
-            @RequestHeader(value = "Last-Event-ID", required = false) String lastEventId) {
+            @RequestParam(required = false) String token,
+            @RequestHeader(value = "Last-Event-ID", required = false) String lastEventId,
+            HttpServletResponse response) throws IOException {
+
+        EmitterMeta meta = resolveIdentity(token);
+        if (meta == null) {
+            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Missing or invalid token");
+            return null;
+        }
 
         UUID clientId = UUID.randomUUID();
-        SseEmitter emitter = registry.register(clientId, emitterTimeoutMillis);
+        SseEmitter emitter = registry.register(clientId, emitterTimeoutMillis, meta);
 
         // Replay missed events if client reconnects with Last-Event-ID
         if (lastEventId != null && !lastEventId.isBlank()) {
-            replayMissedEvents(emitter, lastEventId);
+            replayMissedEvents(emitter, lastEventId, meta);
         }
 
-        log.debug("SSE stream opened for client {}", clientId);
+        log.debug("SSE stream opened for client {} role={}", clientId, meta.role());
         return emitter;
     }
 
-    private void replayMissedEvents(SseEmitter emitter, String lastEventId) {
+    private EmitterMeta resolveIdentity(String token) {
+        if (token == null || token.isBlank()) {
+            return null;
+        }
+        if (!tokenProvider.validateToken(token)) {
+            return null;
+        }
+        try {
+            UUID userId = tokenProvider.getUserId(token);
+            UserRole role = tokenProvider.getRole(token);
+            UUID studentId = tokenProvider.getStudentId(token);
+            return new EmitterMeta(userId, role, studentId);
+        } catch (Exception e) {
+            log.debug("Failed to parse SSE token: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    private void replayMissedEvents(SseEmitter emitter, String lastEventId, EmitterMeta meta) {
         OffsetDateTime since;
         try {
             since = OffsetDateTime.parse(lastEventId);
@@ -78,6 +111,11 @@ public class SseController {
 
             SseEventType sseType = mapToSseType(event.getType());
             if (sseType == null) {
+                continue;
+            }
+
+            // For STUDENT role, skip events that don't involve them
+            if (meta.isStudent() && !isRelevantForStudent(event, meta.studentId())) {
                 continue;
             }
 
@@ -105,6 +143,12 @@ public class SseController {
                 return;
             }
         }
+    }
+
+    private boolean isRelevantForStudent(SlotEvent event, UUID studentId) {
+        if (studentId == null) return false;
+        return studentId.equals(event.getOldStudentId())
+                || studentId.equals(event.getNewStudentId());
     }
 
     private SseEventType mapToSseType(EventType type) {

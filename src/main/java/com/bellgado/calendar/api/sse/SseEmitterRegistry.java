@@ -1,5 +1,6 @@
 package com.bellgado.calendar.api.sse;
 
+import com.bellgado.calendar.domain.enums.UserRole;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -10,6 +11,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -20,11 +22,32 @@ public class SseEmitterRegistry {
 
     private final ObjectMapper objectMapper;
 
-    private final ConcurrentHashMap<UUID, SseEmitter> emitters = new ConcurrentHashMap<>();
+    /**
+     * Carries the identity of the connected client so we can filter events per role.
+     * studentId is non-null only for STUDENT role.
+     */
+    public record EmitterMeta(UUID userId, UserRole role, UUID studentId) {
+        public static EmitterMeta teacher(UUID userId) {
+            return new EmitterMeta(userId, UserRole.TEACHER, null);
+        }
+        public static EmitterMeta admin(UUID userId) {
+            return new EmitterMeta(userId, UserRole.ADMIN, null);
+        }
+        public static EmitterMeta student(UUID userId, UUID studentId) {
+            return new EmitterMeta(userId, UserRole.STUDENT, studentId);
+        }
+        public boolean isStudent() {
+            return role == UserRole.STUDENT;
+        }
+    }
 
-    public SseEmitter register(UUID clientId, long timeoutMillis) {
+    private record EmitterEntry(SseEmitter emitter, EmitterMeta meta) {}
+
+    private final ConcurrentHashMap<UUID, EmitterEntry> emitters = new ConcurrentHashMap<>();
+
+    public SseEmitter register(UUID clientId, long timeoutMillis, EmitterMeta meta) {
         SseEmitter emitter = new SseEmitter(timeoutMillis);
-        emitters.put(clientId, emitter);
+        emitters.put(clientId, new EmitterEntry(emitter, meta));
 
         emitter.onCompletion(() -> {
             emitters.remove(clientId);
@@ -39,11 +62,22 @@ public class SseEmitterRegistry {
             log.debug("SSE client error [{}]: {}", clientId, ex.getMessage());
         });
 
-        log.debug("SSE client registered: {} (total: {})", clientId, emitters.size());
+        log.debug("SSE client registered: {} role={} (total: {})",
+                clientId, meta.role(), emitters.size());
         return emitter;
     }
 
-    public void broadcast(SseEventType eventType, String eventId, Object payload) {
+    /**
+     * Broadcasts an SSE event.
+     *
+     * @param relevantStudentIds  Student UUIDs that should receive this event.
+     *                            TEACHER/ADMIN emitters always receive the event.
+     *                            STUDENT emitters only receive it if their studentId
+     *                            is contained in this set.
+     *                            Pass {@code null} to broadcast to everyone.
+     */
+    public void broadcast(SseEventType eventType, String eventId, Object payload,
+                          Set<UUID> relevantStudentIds) {
         if (emitters.isEmpty()) {
             return;
         }
@@ -56,15 +90,28 @@ public class SseEmitterRegistry {
             return;
         }
 
-        // Snapshot to avoid ConcurrentModificationException if a client disconnects mid-broadcast
-        List<Map.Entry<UUID, SseEmitter>> snapshot = List.copyOf(emitters.entrySet());
+        List<Map.Entry<UUID, EmitterEntry>> snapshot = List.copyOf(emitters.entrySet());
 
-        for (Map.Entry<UUID, SseEmitter> entry : snapshot) {
-            sendToEmitter(entry.getKey(), entry.getValue(), eventType, eventId, data);
+        for (Map.Entry<UUID, EmitterEntry> entry : snapshot) {
+            EmitterEntry ee = entry.getValue();
+            if (shouldSend(ee.meta(), relevantStudentIds)) {
+                sendToEmitter(entry.getKey(), ee.emitter(), eventType, eventId, data);
+            }
         }
     }
 
-    private void sendToEmitter(UUID clientId, SseEmitter emitter, SseEventType eventType, String eventId, String data) {
+    private boolean shouldSend(EmitterMeta meta, Set<UUID> relevantStudentIds) {
+        if (!meta.isStudent()) {
+            return true; // TEACHER/ADMIN always receive
+        }
+        if (relevantStudentIds == null) {
+            return true; // null = broadcast to all
+        }
+        return meta.studentId() != null && relevantStudentIds.contains(meta.studentId());
+    }
+
+    private void sendToEmitter(UUID clientId, SseEmitter emitter,
+                               SseEventType eventType, String eventId, String data) {
         try {
             SseEmitter.SseEventBuilder event = SseEmitter.event()
                     .name(eventType.name())
@@ -86,11 +133,11 @@ public class SseEmitterRegistry {
         if (emitters.isEmpty()) {
             return;
         }
-        List<Map.Entry<UUID, SseEmitter>> snapshot = List.copyOf(emitters.entrySet());
-        for (Map.Entry<UUID, SseEmitter> entry : snapshot) {
+        List<Map.Entry<UUID, EmitterEntry>> snapshot = List.copyOf(emitters.entrySet());
+        for (Map.Entry<UUID, EmitterEntry> entry : snapshot) {
             try {
-                synchronized (entry.getValue()) {
-                    entry.getValue().send(SseEmitter.event().comment("heartbeat"));
+                synchronized (entry.getValue().emitter()) {
+                    entry.getValue().emitter().send(SseEmitter.event().comment("heartbeat"));
                 }
             } catch (IOException | IllegalStateException e) {
                 emitters.remove(entry.getKey());

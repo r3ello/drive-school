@@ -4,6 +4,12 @@ const App = {
     sidebarOpen: true,
 
     init() {
+        // Auth guard — redirect to login if no token
+        if (typeof Auth !== 'undefined' && !Auth.isAuthenticated()) {
+            window.location.href = '/login.html';
+            return;
+        }
+
         // Connect SSE for real-time updates
         SSE.connect();
 
@@ -15,6 +21,15 @@ const App = {
         Waitlist.init();
         Blocks.init();
 
+        // Apply role-based UI before rendering
+        this.applyRoleUI();
+
+        // Wire logout button
+        const logoutBtn = document.getElementById('logoutBtn');
+        if (logoutBtn && typeof Auth !== 'undefined') {
+            logoutBtn.addEventListener('click', () => Auth.logout());
+        }
+
         // Setup navigation & sidebar
         this.setupNavigation();
         this.setupSidebar();
@@ -25,6 +40,23 @@ const App = {
         // Handle responsive sidebar on load
         this.handleResize();
         window.addEventListener('resize', () => this.handleResize());
+    },
+
+    applyRoleUI() {
+        if (typeof Auth === 'undefined') return;
+        const user = Auth.getUser();
+        if (!user) return;
+
+        // Show logged-in user's name in the topbar
+        const nameEl = document.getElementById('userDisplayName');
+        if (nameEl) nameEl.textContent = user.fullName || user.email;
+
+        // STUDENT role: hide teacher-only UI elements
+        if (Auth.isStudent()) {
+            document.querySelectorAll('[data-teacher-only]').forEach(el => {
+                el.style.display = 'none';
+            });
+        }
     },
 
     setupNavigation() {

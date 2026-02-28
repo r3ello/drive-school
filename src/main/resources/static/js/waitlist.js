@@ -28,6 +28,11 @@ const Waitlist = {
     },
 
     async load() {
+        if (typeof Auth !== 'undefined' && Auth.isStudent()) {
+            App.switchView('calendar');
+            return;
+        }
+
         const active = document.getElementById('waitlistActiveFilter').value;
 
         try {

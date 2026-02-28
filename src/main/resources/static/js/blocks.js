@@ -11,6 +11,11 @@ const Blocks = {
     },
 
     async load() {
+        if (typeof Auth !== 'undefined' && Auth.isStudent()) {
+            App.switchView('calendar');
+            return;
+        }
+
         const today = new Date();
         const threeMonthsAgo = new Date(today);
         threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 1);

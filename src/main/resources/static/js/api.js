@@ -2,11 +2,13 @@
 const API = {
     baseUrl: '/api/v1',
 
-    async request(endpoint, options = {}) {
+    async request(endpoint, options = {}, _isRetry = false) {
         const url = `${this.baseUrl}${endpoint}`;
+        const token = (typeof Auth !== 'undefined') ? Auth.getAccessToken() : null;
         const config = {
             headers: {
                 'Content-Type': 'application/json',
+                ...(token ? { 'Authorization': 'Bearer ' + token } : {}),
                 ...options.headers
             },
             ...options
@@ -14,6 +16,21 @@ const API = {
 
         try {
             const response = await fetch(url, config);
+
+            // Access token expired or invalid — try to refresh once, then redirect to login
+            if (response.status === 401 && typeof Auth !== 'undefined') {
+                if (!_isRetry) {
+                    try {
+                        await Auth.refreshAccessToken();
+                        return this.request(endpoint, options, true);
+                    } catch {
+                        // refresh failed — fall through to redirect below
+                    }
+                }
+                // Either refresh failed or the retried request also returned 401
+                Auth.redirectToLogin();
+                return;
+            }
 
             if (response.status === 204) {
                 return null;
@@ -205,6 +222,12 @@ const API = {
     async removeFromWaitlist(id) {
         return this.request(`/waitlist/${id}`, {
             method: 'DELETE'
+        });
+    },
+
+    async inviteStudent(id) {
+        return this.request(`/students/${id}/invite`, {
+            method: 'POST'
         });
     }
 };

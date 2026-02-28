@@ -4,6 +4,7 @@ const Students = {
     pageSize: 20,
     totalPages: 0,
     searchTimeout: null,
+    inviteInProgress: new Set(),
 
     init() {
         this.setupEventListeners();
@@ -78,6 +79,7 @@ const Students = {
                 <td>
                     <button class="btn btn-sm btn-secondary" onclick="Students.showEditStudentModal('${student.id}')">Edit</button>
                     <button class="btn btn-sm btn-secondary" onclick="Students.showStudentHistory('${student.id}')">History</button>
+                    ${student.canInvite ? `<button class="btn btn-sm btn-primary" onclick="Students.inviteStudent('${student.id}', this)">Invite</button>` : ''}
                     ${student.active ? `
                         <button class="btn btn-sm btn-danger" onclick="Students.deactivateStudent('${student.id}')">Deactivate</button>
                     ` : ''}
@@ -429,6 +431,30 @@ const Students = {
             document.getElementById('closeHistoryBtn').addEventListener('click', () => Modal.close());
         } catch (error) {
             Toast.error('Failed to load student history: ' + error.message);
+        }
+    },
+
+    async inviteStudent(studentId, btn) {
+        // Guard against concurrent clicks on the same student
+        if (this.inviteInProgress.has(studentId)) return;
+        this.inviteInProgress.add(studentId);
+
+        if (btn) {
+            btn.disabled = true;
+            btn.textContent = 'Sending…';
+        }
+
+        try {
+            await API.inviteStudent(studentId);
+            Toast.success('Invitation sent successfully');
+            this.load(); // reload table — button disappears once user account exists
+        } catch (error) {
+            Toast.error('Failed to send invitation: ' + error.message);
+            if (btn) {
+                btn.disabled = false;
+                btn.textContent = 'Invite';
+            }
+            this.inviteInProgress.delete(studentId);
         }
     },
 

@@ -161,7 +161,8 @@ class CalendarAgentToolsTest {
     void createStudent_passesBasicFieldsOnly() throws Exception {
         StudentResponse mockResponse = new StudentResponse(
                 studentId, "Maria", "0888", "maria@test.com", null,
-                true, null, false, null, null, null, null, null, null, null, null, null);
+                true, null, false, null, false, null, null, null, null, null, null, null,
+                null, null);
         when(studentService.create(any(StudentCreateRequest.class))).thenReturn(mockResponse);
 
         String result = tools.createStudent("Maria", "0888", "maria@test.com", "");

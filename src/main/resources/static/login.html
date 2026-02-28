@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign In — Calendar</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="css/styles.css">
+    <style>
+        /* ---- Login page layout ---- */
+        html, body { height: 100%; }
+
+        .login-page {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* ---- Brand panel (left, dark) ---- */
+        .login-brand-panel {
+            width: 420px;
+            flex-shrink: 0;
+            background: #18181b;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 44px 48px;
+            overflow: hidden;
+        }
+
+        /* Ambient glow inside brand panel */
+        .login-brand-panel::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background:
+                radial-gradient(ellipse at 20% 15%,  rgba(217, 119, 6, 0.18) 0%, transparent 60%),
+                radial-gradient(ellipse at 85% 80%, rgba(217, 119, 6, 0.09) 0%, transparent 55%);
+            pointer-events: none;
+        }
+
+        /* Decorative calendar grid — purely visual */
+        .login-brand-panel::after {
+            content: '';
+            position: absolute;
+            right: -40px;
+            bottom: -40px;
+            width: 320px;
+            height: 320px;
+            border: 1.5px solid rgba(217, 119, 6, 0.12);
+            border-radius: 24px;
+            transform: rotate(15deg);
+        }
+
+        .login-brand-inner {
+            position: relative;
+            z-index: 1;
+        }
+
+        .login-brand-mark {
+            width: 52px;
+            height: 52px;
+            background: #d97706;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 16px rgba(217, 119, 6, 0.40);
+            margin-bottom: 28px;
+        }
+
+        .login-brand-name {
+            font-size: 2rem;
+            font-weight: 800;
+            color: #f4f4f5;
+            letter-spacing: -0.04em;
+            line-height: 1.1;
+            margin-bottom: 12px;
+        }
+
+        .login-brand-tagline {
+            font-size: 0.9375rem;
+            color: #71717a;
+            font-weight: 400;
+            line-height: 1.6;
+            max-width: 280px;
+        }
+
+        /* Decorative feature list */
+        .login-features {
+            position: relative;
+            z-index: 1;
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .login-feature-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 0.875rem;
+            color: #a1a1aa;
+            font-weight: 500;
+        }
+
+        .login-feature-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: #d97706;
+            flex-shrink: 0;
+            opacity: 0.8;
+        }
+
+        /* Decorative nested squares in corner */
+        .login-decor {
+            position: absolute;
+            right: 32px;
+            top: 40px;
+            z-index: 0;
+            opacity: 0.06;
+        }
+
+        /* ---- Form panel (right, light) ---- */
+        .login-form-panel {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f6f6f3;
+            padding: 40px 24px;
+        }
+
+        .login-card {
+            background: #ffffff;
+            border: 1px solid #e4e4e7;
+            border-radius: 18px;
+            padding: 40px;
+            width: 100%;
+            max-width: 420px;
+            box-shadow:
+                0 1px 3px rgba(0,0,0,0.06),
+                0 8px 24px -4px rgba(0,0,0,0.08);
+        }
+
+        .login-card-header {
+            margin-bottom: 28px;
+        }
+
+        .login-card-title {
+            font-size: 1.375rem;
+            font-weight: 800;
+            color: #18181b;
+            letter-spacing: -0.03em;
+            margin-bottom: 4px;
+        }
+
+        .login-subtitle {
+            color: #71717a;
+            font-size: 0.875rem;
+            font-weight: 400;
+        }
+
+        /* Alerts */
+        .login-alert {
+            display: none;
+            padding: 12px 14px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 0.875rem;
+            align-items: flex-start;
+            gap: 10px;
+        }
+        .login-alert.visible { display: flex; }
+        .login-alert-icon { flex-shrink: 0; margin-top: 1px; }
+
+        .login-alert--error {
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            color: #b91c1c;
+        }
+
+        .login-alert--success {
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            color: #15803d;
+        }
+
+        /* Form */
+        .form-group {
+            margin-bottom: 18px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 6px;
+            font-size: 0.8125rem;
+            font-weight: 600;
+            color: #18181b;
+        }
+
+        .input-wrapper { position: relative; }
+
+        .input-wrapper input {
+            width: 100%;
+            padding: 11px 14px;
+            border: 1.5px solid #e4e4e7;
+            border-radius: 8px;
+            font-size: 0.9375rem;
+            background: #ffffff;
+            color: #18181b;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            -webkit-appearance: none;
+            appearance: none;
+            font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
+            font-weight: 500;
+        }
+
+        .input-wrapper input:focus {
+            outline: none;
+            border-color: #d97706;
+            box-shadow: 0 0 0 3px rgba(217, 119, 6, 0.12);
+        }
+
+        .input-wrapper input.has-toggle { padding-right: 46px; }
+
+        .password-toggle {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: #a1a1aa;
+            padding: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 6px;
+            transition: color 0.2s;
+        }
+        .password-toggle:hover { color: #52525b; }
+
+        .login-submit {
+            width: 100%;
+            padding: 12px 20px;
+            font-size: 0.9375rem;
+            font-weight: 700;
+            letter-spacing: 0.01em;
+            justify-content: center;
+            border-radius: 8px;
+            margin-top: 6px;
+            background: #d97706;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
+            transition: background 0.2s, box-shadow 0.2s, transform 0.15s;
+            box-shadow: 0 1px 3px rgba(217,119,6,0.25);
+            display: flex;
+            align-items: center;
+        }
+        .login-submit:hover {
+            background: #b45309;
+            box-shadow: 0 3px 10px rgba(217,119,6,0.30);
+            transform: translateY(-1px);
+        }
+        .login-submit:active { transform: translateY(0); }
+        .login-submit:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+        .login-footer {
+            margin-top: 22px;
+            text-align: center;
+            font-size: 0.8125rem;
+            color: #a1a1aa;
+        }
+
+        /* ---- Mobile: stack panels vertically ---- */
+        @media (max-width: 860px) {
+            .login-page { flex-direction: column; }
+            .login-brand-panel {
+                width: 100%;
+                padding: 32px 24px;
+                flex-direction: row;
+                align-items: center;
+                justify-content: flex-start;
+                gap: 20px;
+                min-height: auto;
+            }
+            .login-brand-panel::after { display: none; }
+            .login-features { display: none; }
+            .login-brand-mark { margin-bottom: 0; width: 40px; height: 40px; border-radius: 10px; }
+            .login-brand-name { font-size: 1.375rem; margin-bottom: 2px; }
+            .login-brand-tagline { display: none; }
+            .login-form-panel { padding: 24px 16px; align-items: flex-start; }
+            .login-card { padding: 28px 24px; }
+        }
+    </style>
+</head>
+<body>
+<div class="login-page">
+
+    <!-- ---- Brand Panel (left) ---- -->
+    <div class="login-brand-panel">
+        <!-- Decorative large squares -->
+        <svg class="login-decor" width="260" height="260" viewBox="0 0 260 260" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="10" y="10" width="240" height="240" rx="24" stroke="white" stroke-width="2"/>
+            <rect x="40" y="40" width="180" height="180" rx="18" stroke="white" stroke-width="1.5"/>
+            <rect x="70" y="70" width="120" height="120" rx="12" stroke="white" stroke-width="1"/>
+        </svg>
+
+        <div class="login-brand-inner">
+            <div class="login-brand-mark">
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                    <line x1="16" y1="2" x2="16" y2="6"/>
+                    <line x1="8" y1="2" x2="8" y2="6"/>
+                    <line x1="3" y1="10" x2="21" y2="10"/>
+                </svg>
+            </div>
+            <div class="login-brand-name">Calendar</div>
+            <div class="login-brand-tagline">Your class scheduling hub — book, manage, and track sessions effortlessly.</div>
+        </div>
+
+        <ul class="login-features">
+            <li class="login-feature-item">
+                <span class="login-feature-dot"></span>
+                Real-time schedule updates
+            </li>
+            <li class="login-feature-item">
+                <span class="login-feature-dot"></span>
+                Waitlist &amp; booking management
+            </li>
+            <li class="login-feature-item">
+                <span class="login-feature-dot"></span>
+                Multi-channel notifications
+            </li>
+            <li class="login-feature-item">
+                <span class="login-feature-dot"></span>
+                AI-powered Telegram bot
+            </li>
+        </ul>
+    </div>
+
+    <!-- ---- Form Panel (right) ---- -->
+    <div class="login-form-panel">
+        <div class="login-card">
+
+            <!-- Email confirmed success banner -->
+            <div id="confirmationSuccess" class="login-alert login-alert--success">
+                <span class="login-alert-icon">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                        <polyline points="22 4 12 14.01 9 11.01"/>
+                    </svg>
+                </span>
+                <span>Email confirmed! You can now sign in below.</span>
+            </div>
+
+            <!-- Login Section -->
+            <div id="loginSection">
+                <div class="login-card-header">
+                    <div class="login-card-title">Welcome back</div>
+                    <div class="login-subtitle">Sign in to your account</div>
+                </div>
+
+                <div id="loginError" class="login-alert login-alert--error">
+                    <span class="login-alert-icon">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10"/>
+                            <line x1="12" y1="8" x2="12" y2="12"/>
+                            <line x1="12" y1="16" x2="12.01" y2="16"/>
+                        </svg>
+                    </span>
+                    <span id="loginErrorText"></span>
+                </div>
+
+                <form id="loginForm" novalidate>
+                    <div class="form-group">
+                        <label for="loginEmail">Email address</label>
+                        <div class="input-wrapper">
+                            <input type="email" id="loginEmail" required autocomplete="email"
+                                   placeholder="you@example.com">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="loginPassword">Password</label>
+                        <div class="input-wrapper">
+                            <input type="password" id="loginPassword" required autocomplete="current-password"
+                                   class="has-toggle" placeholder="••••••••">
+                            <button type="button" class="password-toggle" id="toggleLoginPwd" aria-label="Show password">
+                                <svg id="eyeIconLogin" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                                    <circle cx="12" cy="12" r="3"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                    <button type="submit" class="login-submit" id="loginBtn">Sign In</button>
+                </form>
+            </div>
+
+            <!-- Change Password Section (shown after first login) -->
+            <div id="changePasswordSection" style="display:none;">
+                <div class="login-card-header">
+                    <div class="login-card-title">Set new password</div>
+                    <div class="login-subtitle">You must change your password before continuing</div>
+                </div>
+
+                <div id="changePasswordError" class="login-alert login-alert--error">
+                    <span class="login-alert-icon">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10"/>
+                            <line x1="12" y1="8" x2="12" y2="12"/>
+                            <line x1="12" y1="16" x2="12.01" y2="16"/>
+                        </svg>
+                    </span>
+                    <span id="changePasswordErrorText"></span>
+                </div>
+
+                <form id="changePasswordForm" novalidate>
+                    <div class="form-group">
+                        <label for="currentPassword">Current Password</label>
+                        <div class="input-wrapper">
+                            <input type="password" id="currentPassword" required autocomplete="current-password"
+                                   class="has-toggle" placeholder="••••••••">
+                            <button type="button" class="password-toggle" id="toggleCurrentPwd" aria-label="Show password">
+                                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                                    <circle cx="12" cy="12" r="3"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="newPassword">New Password</label>
+                        <div class="input-wrapper">
+                            <input type="password" id="newPassword" required minlength="8" autocomplete="new-password"
+                                   class="has-toggle" placeholder="Minimum 8 characters">
+                            <button type="button" class="password-toggle" id="toggleNewPwd" aria-label="Show password">
+                                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                                    <circle cx="12" cy="12" r="3"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="confirmPassword">Confirm New Password</label>
+                        <div class="input-wrapper">
+                            <input type="password" id="confirmPassword" required autocomplete="new-password"
+                                   class="has-toggle" placeholder="Repeat new password">
+                            <button type="button" class="password-toggle" id="toggleConfirmPwd" aria-label="Show password">
+                                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                                    <circle cx="12" cy="12" r="3"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                    <button type="submit" class="login-submit" id="changePasswordBtn">Set New Password</button>
+                </form>
+            </div>
+
+            <div class="login-footer">Class Scheduling Calendar</div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // localStorage keys (must match auth.js)
+    const KEYS = {
+        ACCESS:  'calendar_access_token',
+        REFRESH: 'calendar_refresh_token',
+        USER:    'calendar_user'
+    };
+
+    // Already authenticated → go straight to the app
+    if (localStorage.getItem(KEYS.ACCESS)) {
+        window.location.replace('/');
+    }
+
+    // Show email confirmed banner if redirected from confirm-email endpoint
+    if (new URLSearchParams(window.location.search).get('confirmed') === 'true') {
+        document.getElementById('confirmationSuccess').classList.add('visible');
+    }
+
+    // -------------------------------------------------------------------------
+    // Helpers
+    // -------------------------------------------------------------------------
+    function showError(errorDivId, textId, msg) {
+        document.getElementById(textId).textContent = msg;
+        document.getElementById(errorDivId).classList.add('visible');
+    }
+
+    function hideError(errorDivId) {
+        document.getElementById(errorDivId).classList.remove('visible');
+    }
+
+    function setLoading(btnId, loading, defaultText) {
+        const btn = document.getElementById(btnId);
+        btn.disabled = loading;
+        btn.textContent = loading ? 'Please wait…' : defaultText;
+    }
+
+    function wirePasswordToggle(toggleId, inputId) {
+        const btn = document.getElementById(toggleId);
+        if (!btn) return;
+        btn.addEventListener('click', () => {
+            const input = document.getElementById(inputId);
+            const isText = input.type === 'text';
+            input.type = isText ? 'password' : 'text';
+            btn.innerHTML = isText
+                ? `<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`
+                : `<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>`;
+        });
+    }
+
+    wirePasswordToggle('toggleLoginPwd',    'loginPassword');
+    wirePasswordToggle('toggleCurrentPwd',  'currentPassword');
+    wirePasswordToggle('toggleNewPwd',      'newPassword');
+    wirePasswordToggle('toggleConfirmPwd',  'confirmPassword');
+
+    // -------------------------------------------------------------------------
+    // Login
+    // -------------------------------------------------------------------------
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        hideError('loginError');
+        setLoading('loginBtn', true, 'Sign In');
+
+        const email    = document.getElementById('loginEmail').value.trim();
+        const password = document.getElementById('loginPassword').value;
+
+        try {
+            const res  = await fetch('/api/v1/auth/login', {
+                method:  'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body:    JSON.stringify({ email, password })
+            });
+
+            const data = await res.json().catch(() => ({}));
+
+            if (!res.ok) {
+                showError('loginError', 'loginErrorText', data.detail || data.title || 'Invalid email or password');
+                return;
+            }
+
+            // Persist tokens
+            localStorage.setItem(KEYS.ACCESS, data.accessToken);
+            if (data.refreshToken) localStorage.setItem(KEYS.REFRESH, data.refreshToken);
+
+            // Fetch and persist full user profile
+            const meRes = await fetch('/api/v1/auth/me', {
+                headers: { 'Authorization': 'Bearer ' + data.accessToken }
+            });
+            if (meRes.ok) {
+                const user = await meRes.json();
+                localStorage.setItem(KEYS.USER, JSON.stringify(user));
+            }
+
+            if (data.passwordChangeRequired) {
+                document.getElementById('loginSection').style.display = 'none';
+                document.getElementById('changePasswordSection').style.display = 'block';
+            } else {
+                window.location.replace('/');
+            }
+        } catch {
+            showError('loginError', 'loginErrorText', 'Network error. Please try again.');
+        } finally {
+            setLoading('loginBtn', false, 'Sign In');
+        }
+    });
+
+    // -------------------------------------------------------------------------
+    // Change Password (first login)
+    // -------------------------------------------------------------------------
+    document.getElementById('changePasswordForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        hideError('changePasswordError');
+
+        const currentPassword = document.getElementById('currentPassword').value;
+        const newPassword     = document.getElementById('newPassword').value;
+        const confirmPassword = document.getElementById('confirmPassword').value;
+
+        if (newPassword !== confirmPassword) {
+            showError('changePasswordError', 'changePasswordErrorText', 'Passwords do not match');
+            return;
+        }
+
+        setLoading('changePasswordBtn', true, 'Set New Password');
+
+        try {
+            const res = await fetch('/api/v1/auth/change-password', {
+                method:  'POST',
+                headers: {
+                    'Content-Type':  'application/json',
+                    'Authorization': 'Bearer ' + localStorage.getItem(KEYS.ACCESS)
+                },
+                body: JSON.stringify({ currentPassword, newPassword })
+            });
+
+            if (!res.ok) {
+                const data = await res.json().catch(() => ({}));
+                showError('changePasswordError', 'changePasswordErrorText',
+                    data.detail || data.title || 'Failed to change password');
+                return;
+            }
+
+            // Update stored user record
+            try {
+                const user = JSON.parse(localStorage.getItem(KEYS.USER) || '{}');
+                user.passwordChangeRequired = false;
+                localStorage.setItem(KEYS.USER, JSON.stringify(user));
+            } catch {}
+
+            window.location.replace('/');
+        } catch {
+            showError('changePasswordError', 'changePasswordErrorText', 'Network error. Please try again.');
+        } finally {
+            setLoading('changePasswordBtn', false, 'Set New Password');
+        }
+    });
+</script>
+</body>
+</html>
