@@ -11,17 +11,10 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 @SpringBootApplication
 @ConfigurationPropertiesScan
 @EnableScheduling
-public class CalendarApplication implements CommandLineRunner {
+public class CalendarApplication {
 
-    @Autowired
-    PasswordEncoder passwordEncoder;
     public static void main(String[] args) {
         SpringApplication.run(CalendarApplication.class, args);
     }
 
-
-    @Override
-    public void run(String... args) throws Exception {
-        System.out.println(" pass  "+passwordEncoder.encode("admin"));
-    }
 }

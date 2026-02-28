@@ -72,12 +72,16 @@ server:
   error:
     include-message: always
     include-binding-errors: always
+  forward-headers-strategy: framework
 
 logging:
   level:
     com.bellgado.calendar: DEBUG
     org:
       springframework:
+        web:
+          cors: DEBUG
+        security: DEBUG
         ai:
           chat:
             client:
